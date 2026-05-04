@@ -1,0 +1,317 @@
+<link rel="stylesheet" href="recycoin_rvm_web_app.css">
+
+<div class="app-wrap">
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 2C9 2 5 4 5 9C5 12.3 6.8 14.5 9 15C11.2 14.5 13 12.3 13 9C13 4 9 2 9 2Z" fill="#085041"/>
+        <circle cx="9" cy="9" r="2" fill="#9FE1CB"/>
+        <path d="M9 7V5M12 9H14M6 9H4" stroke="#9FE1CB" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="topbar-title">REYCOIN</div>
+      <div class="topbar-subtitle">Barangay Tetuan · Zamboanga City</div>
+    </div>
+    <div class="topbar-status">
+      <div class="status-dot"></div>
+      Machine Online
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showPage('deposit')">Deposit</button>
+    <button class="nav-btn" onclick="showPage('redeem')">Redeem</button>
+    <button class="nav-btn" onclick="showPage('history')">History</button>
+    <button class="nav-btn" onclick="showPage('leaderboard')">Community</button>
+  </div>
+
+  <div class="content">
+
+    <div id="page-dashboard" class="page active">
+      <div class="metric-row">
+        <div class="metric metric-green">
+          <div class="metric-label">Your Points</div>
+          <div class="metric-value" id="pts-display">78</div>
+          <div class="metric-sub">22 to next reward</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Bottles Recycled</div>
+          <div class="metric-value" id="bottles-display">54</div>
+          <div class="metric-sub">this month</div>
+        </div>
+        <div class="metric metric-amber">
+          <div class="metric-label">Rewards Claimed</div>
+          <div class="metric-value">2</div>
+          <div class="metric-sub">total</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Rank</div>
+          <div class="metric-value">#3</div>
+          <div class="metric-sub">in barangay</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Progress to Reward</span>
+          <span class="badge badge-green">78 / 100 pts</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="main-progress" style="width: 78%"></div>
+        </div>
+        <div class="progress-label">
+          <span>0</span>
+          <span style="color:#0F6E56; font-weight:500;">78 pts</span>
+          <span>100 pts = 1 reward</span>
+        </div>
+      </div>
+
+      
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Activity</span>
+        </div>
+        <div class="transaction-list">
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info">
+              <div class="tx-name">1.5L bottle deposited</div>
+              <div class="tx-time">Today, 9:14 AM</div>
+            </div>
+            <div class="tx-pts">+3 pts</div>
+          </div>
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info">
+              <div class="tx-name">500mL bottle deposited</div>
+              <div class="tx-time">Today, 9:12 AM</div>
+            </div>
+            <div class="tx-pts">+1 pt</div>
+          </div>
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info">
+              <div class="tx-name">1L bottle deposited</div>
+              <div class="tx-time">Yesterday, 3:40 PM</div>
+            </div>
+            <div class="tx-pts">+2 pts</div>
+          </div>
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="4" width="8" height="6" rx="1.5" fill="#BA7517"/><path d="M5 4V3C5 2.4 5.4 2 6 2H8C8.6 2 9 2.4 9 3V4" stroke="#BA7517" stroke-width="1.2"/></svg></div>
+            <div class="tx-info">
+              <div class="tx-name">QR code redeemed</div>
+              <div class="tx-time">3 days ago</div>
+            </div>
+            <div class="tx-pts" style="color:#BA7517">-100 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-deposit" class="page">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Identify Yourself</span>
+        </div>
+        </div>
+          <div class="qr-big" id="qr-pts-big">78 pts</div>
+            <div class="qr-caption">Deposit 22 more points worth of bottles</div>
+          </div>
+          <div class="qr-placeholder">
+            <div class="qr-locked">
+              <svg class="qr-code-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="5" y="5" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
+                <rect x="13" y="13" width="19" height="19" rx="1" fill="#0F6E56"/>
+                <rect x="60" y="5" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
+                <rect x="68" y="13" width="19" height="19" rx="1" fill="#0F6E56"/>
+                <rect x="5" y="60" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
+                <rect x="13" y="68" width="19" height="19" rx="1" fill="#0F6E56"/>
+                <rect x="50" y="50" width="8" height="8" fill="#0F6E56"/>
+                <rect x="62" y="50" width="8" height="8" fill="#0F6E56"/>
+                <rect x="74" y="50" width="8" height="8" fill="#0F6E56"/>
+                <rect x="86" y="50" width="8" height="8" fill="#0F6E56"/>
+                <rect x="50" y="62" width="8" height="8" fill="#0F6E56"/>
+                <rect x="74" y="62" width="8" height="8" fill="#0F6E56"/>
+                <rect x="62" y="74" width="8" height="8" fill="#0F6E56"/>
+                <rect x="74" y="74" width="8" height="8" fill="#0F6E56"/>
+                <rect x="86" y="74" width="8" height="8" fill="#0F6E56"/>
+                <rect x="50" y="86" width="8" height="8" fill="#0F6E56"/>
+                <rect x="86" y="86" width="8" height="8" fill="#0F6E56"/>
+              </svg>
+            </div>
+          </div>
+          <div id="qr-unlock-btn-wrap">
+            <div class="progress-bar-wrap" style="margin:10px 0 6px">
+              <div class="progress-bar" style="width:78%"></div>
+            </div>
+            <div class="progress-label"><span>0</span><span>78 / 100 pts</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Available Rewards</span></div>
+        <div style="display:grid;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+            <div style="font-size:22px">🍚</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">1 kg Rice</div><div style="font-size:11px;color:var(--color-text-secondary)">Staple food reward</div></div>
+            <span class="badge badge-green">100 pts</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+            <div style="font-size:22px">🥫</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Canned Goods Pack</div><div style="font-size:11px;color:var(--color-text-secondary)">Assorted sardines & corned beef</div></div>
+            <span class="badge badge-green">100 pts</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+            <div style="font-size:22px">🍪</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Biscuit Pack</div><div style="font-size:11px;color:var(--color-text-secondary)">Assorted biscuits</div></div>
+            <span class="badge badge-green">100 pts</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+            <div style="font-size:22px">📱</div>
+            <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">GCash Load ₱20</div><div style="font-size:11px;color:var(--color-text-secondary)">Digital cash reward</div></div>
+            <span class="badge badge-green">100 pts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-history" class="page">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Transaction History</span>
+          <span class="badge badge-gray">May 2026</span>
+        </div>
+        <div class="transaction-list" id="history-list">
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">1.5L bottle</div><div class="tx-time">May 3, 9:14 AM</div></div>
+            <div class="tx-pts">+3 pts</div>
+          </div>
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">500mL bottle</div><div class="tx-time">May 3, 9:12 AM</div></div>
+            <div class="tx-pts">+1 pt</div>
+          </div>
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">1L bottle</div><div class="tx-time">May 2, 3:40 PM</div></div>
+            <div class="tx-pts">+2 pts</div>
+          </div>
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">250mL bottle</div><div class="tx-time">May 2, 10:05 AM</div></div>
+            <div class="tx-pts">+0.5 pts</div>
+          </div>
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="4" width="8" height="6" rx="1.5" fill="#BA7517"/></svg></div>
+            <div class="tx-info"><div class="tx-name">QR redeemed — Rice 1kg</div><div class="tx-time">Apr 30, 2:00 PM</div></div>
+            <div class="tx-pts" style="color:#BA7517">-100 pts</div>
+          </div>
+          <div class="tx-row">
+            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">1L bottle</div><div class="tx-time">Apr 29, 8:30 AM</div></div>
+            <div class="tx-pts">+2 pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-leaderboard" class="page">
+      <div class="metric-row">
+        <div class="metric">
+          <div class="metric-label">Bottles This Month</div>
+          <div class="metric-value" style="color:#0F6E56">1,284</div>
+          <div class="metric-sub">in Brgy. Tetuan</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Active Recyclers</div>
+          <div class="metric-value">67</div>
+          <div class="metric-sub">residents</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Top Recyclers — May 2026</span></div>
+        <div>
+          <div class="leaderboard-row">
+            <div class="lb-rank gold">1</div>
+            <div class="lb-avatar" style="background:#FAEEDA;color:#633806">AM</div>
+            <div class="lb-name">Aling Maria</div>
+            <div>
+              <div class="lb-pts">243 pts</div>
+              <div class="lb-bottles">162 bottles</div>
+            </div>
+          </div>
+          <div class="leaderboard-row">
+            <div class="lb-rank silver">2</div>
+            <div class="lb-avatar" style="background:#F1EFE8;color:#444441">JR</div>
+            <div class="lb-name">Kuya Ramon</div>
+            <div>
+              <div class="lb-pts">187 pts</div>
+              <div class="lb-bottles">124 bottles</div>
+            </div>
+          </div>
+          <div class="leaderboard-row" style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:6px 8px;border-bottom:none;margin:4px 0">
+            <div class="lb-rank bronze">3</div>
+            <div class="lb-avatar">YO</div>
+            <div class="lb-name" style="font-weight:500">You (09171234567)</div>
+            <div>
+              <div class="lb-pts">78 pts</div>
+              <div class="lb-bottles">54 bottles</div>
+            </div>
+          </div>
+          <div class="leaderboard-row">
+            <div class="lb-rank">4</div>
+            <div class="lb-avatar" style="background:#FAECE7;color:#4A1B0C">LC</div>
+            <div class="lb-name">Lola Cita</div>
+            <div>
+              <div class="lb-pts">65 pts</div>
+              <div class="lb-bottles">43 bottles</div>
+            </div>
+          </div>
+          <div class="leaderboard-row">
+            <div class="lb-rank">5</div>
+            <div class="lb-avatar" style="background:#E6F1FB;color:#042C53">BP</div>
+            <div class="lb-name">Boy Paltu</div>
+            <div>
+              <div class="lb-pts">52 pts</div>
+              <div class="lb-bottles">35 bottles</div>
+            </div>
+          </div>
+          <div class="leaderboard-row" style="border-bottom:none">
+            <div class="lb-rank">6</div>
+            <div class="lb-avatar" style="background:#EAF3DE;color:#173404">NS</div>
+            <div class="lb-name">Nanay Sising</div>
+            <div>
+              <div class="lb-pts">41 pts</div>
+              <div class="lb-bottles">28 bottles</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Machine Status</span></div>
+        <div style="display:grid;gap:8px">
+          <div>
+            <div class="progress-label" style="margin-bottom:4px"><span style="font-size:12px;color:var(--color-text-secondary)">Bin fill level</span><span class="badge badge-amber">65%</span></div>
+            <div class="progress-bar-wrap"><div class="progress-bar" style="width:65%;background:#BA7517"></div></div>
+          </div>
+          <div>
+            <div class="progress-label" style="margin-bottom:4px"><span style="font-size:12px;color:var(--color-text-secondary)">Solar battery</span><span class="badge badge-green">88%</span></div>
+            <div class="progress-bar-wrap"><div class="progress-bar" style="width:88%"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div id="toast">Points added!</div>
+</div>
+<script src="recycoin_rvm_web_app.js"></script>
