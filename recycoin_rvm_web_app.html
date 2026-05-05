@@ -1,317 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a5c46">
+<title>RECYCOIN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="recycoin_rvm_web_app.css">
+</head>
+<body>
+<div class="shell">
 
-<div class="app-wrap">
-<div class="app">
-  <div class="topbar">
-    <div class="topbar-logo">
-      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M9 2C9 2 5 4 5 9C5 12.3 6.8 14.5 9 15C11.2 14.5 13 12.3 13 9C13 4 9 2 9 2Z" fill="#085041"/>
-        <circle cx="9" cy="9" r="2" fill="#9FE1CB"/>
-        <path d="M9 7V5M12 9H14M6 9H4" stroke="#9FE1CB" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-logo">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M10 2C10 2 6 4.5 6 10C6 13.5 7.8 15.8 10 16.5C12.2 15.8 14 13.5 14 10C14 4.5 10 2 10 2Z" fill="rgba(255,255,255,0.9)"/>
+        <circle cx="10" cy="10" r="2.5" fill="rgba(255,255,255,0.4)"/>
+        <path d="M10 7.5V5.5M13 10H15M7 10H5" stroke="rgba(255,255,255,0.7)" stroke-width="1.3" stroke-linecap="round"/>
       </svg>
     </div>
-    <div>
-      <div class="topbar-title">REYCOIN</div>
-      <div class="topbar-subtitle">Barangay Tetuan · Zamboanga City</div>
+    <div class="header-info">
+      <div class="header-title">RECYCOIN</div>
+      <div class="header-sub">Barangay Tetuan · Zamboanga City</div>
     </div>
-    <div class="topbar-status">
-      <div class="status-dot"></div>
-      Machine Online
+    <div class="header-badge">
+      <div class="header-badge-dot"></div>
+      Online
     </div>
   </div>
 
-  <div class="nav">
-    <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
-    <button class="nav-btn" onclick="showPage('deposit')">Deposit</button>
-    <button class="nav-btn" onclick="showPage('redeem')">Redeem</button>
-    <button class="nav-btn" onclick="showPage('history')">History</button>
-    <button class="nav-btn" onclick="showPage('leaderboard')">Community</button>
-  </div>
+  <!-- SCROLLABLE CONTENT -->
+  <div class="scroll-area">
 
-  <div class="content">
-
+    <!-- DASHBOARD -->
     <div id="page-dashboard" class="page active">
-      <div class="metric-row">
-        <div class="metric metric-green">
-          <div class="metric-label">Your Points</div>
-          <div class="metric-value" id="pts-display">78</div>
-          <div class="metric-sub">22 to next reward</div>
+
+      <div class="hero-card">
+        <div class="hero-greeting">Good morning,</div>
+        <div class="hero-name">09171234567</div>
+        <div class="hero-pts-label">Your Points</div>
+        <div>
+          <span class="hero-pts" id="pts-display">78</span>
+          <span class="hero-pts-unit">pts</span>
         </div>
-        <div class="metric">
-          <div class="metric-label">Bottles Recycled</div>
-          <div class="metric-value" id="bottles-display">54</div>
-          <div class="metric-sub">this month</div>
-        </div>
-        <div class="metric metric-amber">
-          <div class="metric-label">Rewards Claimed</div>
-          <div class="metric-value">2</div>
-          <div class="metric-sub">total</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Rank</div>
-          <div class="metric-value">#3</div>
-          <div class="metric-sub">in barangay</div>
+        <div class="hero-meta">
+          
+          
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header">
+        <div class="card-hd">
           <span class="card-title">Progress to Reward</span>
-          <span class="badge badge-green">78 / 100 pts</span>
+          <span class="badge badge-green" id="prog-badge">78 / 100</span>
         </div>
-        <div class="progress-bar-wrap">
-          <div class="progress-bar" id="main-progress" style="width: 78%"></div>
+        <div class="prog-wrap">
+          <div class="prog-bar" id="main-progress" style="width:78%"></div>
         </div>
-        <div class="progress-label">
-          <span>0</span>
-          <span style="color:#0F6E56; font-weight:500;">78 pts</span>
-          <span>100 pts = 1 reward</span>
+        <div class="prog-labels">
+          <span>0 pts</span>
+          <span class="current" id="prog-label">78 pts</span>
+          <span>100 pts</span>
         </div>
       </div>
 
       
 
       <div class="card">
-        <div class="card-header">
+        <div class="card-hd">
           <span class="card-title">Recent Activity</span>
         </div>
-        <div class="transaction-list">
+        <div class="tx-list">
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
-            <div class="tx-info">
-              <div class="tx-name">1.5L bottle deposited</div>
-              <div class="tx-time">Today, 9:14 AM</div>
+            <div class="tx-icon deposit">
+              <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1.5C8 1.5 5 3.5 5 8C5 10.8 6.5 12.5 8 13C9.5 12.5 11 10.8 11 8C11 3.5 8 1.5 8 1.5Z" fill="#1D9E75"/></svg>
             </div>
-            <div class="tx-pts">+3 pts</div>
+            <div class="tx-info"><div class="tx-name">1.5L bottle deposited</div><div class="tx-time">Today · 9:14 AM</div></div>
+            <div class="tx-pts plus">+3 pts</div>
           </div>
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
-            <div class="tx-info">
-              <div class="tx-name">500mL bottle deposited</div>
-              <div class="tx-time">Today, 9:12 AM</div>
+            <div class="tx-icon deposit">
+              <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1.5C8 1.5 5 3.5 5 8C5 10.8 6.5 12.5 8 13C9.5 12.5 11 10.8 11 8C11 3.5 8 1.5 8 1.5Z" fill="#1D9E75"/></svg>
             </div>
-            <div class="tx-pts">+1 pt</div>
+            <div class="tx-info"><div class="tx-name">500mL bottle deposited</div><div class="tx-time">Today · 9:12 AM</div></div>
+            <div class="tx-pts plus">+1 pt</div>
           </div>
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
-            <div class="tx-info">
-              <div class="tx-name">1L bottle deposited</div>
-              <div class="tx-time">Yesterday, 3:40 PM</div>
+            <div class="tx-icon deposit">
+              <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1.5C8 1.5 5 3.5 5 8C5 10.8 6.5 12.5 8 13C9.5 12.5 11 10.8 11 8C11 3.5 8 1.5 8 1.5Z" fill="#1D9E75"/></svg>
             </div>
-            <div class="tx-pts">+2 pts</div>
+            <div class="tx-info"><div class="tx-name">1L bottle deposited</div><div class="tx-time">Yesterday · 3:40 PM</div></div>
+            <div class="tx-pts plus">+2 pts</div>
           </div>
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="4" width="8" height="6" rx="1.5" fill="#BA7517"/><path d="M5 4V3C5 2.4 5.4 2 6 2H8C8.6 2 9 2.4 9 3V4" stroke="#BA7517" stroke-width="1.2"/></svg></div>
-            <div class="tx-info">
-              <div class="tx-name">QR code redeemed</div>
-              <div class="tx-time">3 days ago</div>
+            <div class="tx-icon redeem">
+              <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="3" y="5" width="10" height="7" rx="1.5" fill="#BA7517"/><path d="M6 5V4C6 3.4 6.4 3 7 3H9C9.6 3 10 3.4 10 4V5" stroke="#BA7517" stroke-width="1.2"/></svg>
             </div>
-            <div class="tx-pts" style="color:#BA7517">-100 pts</div>
+            <div class="tx-info"><div class="tx-name">QR code redeemed</div><div class="tx-time">3 days ago</div></div>
+            <div class="tx-pts minus">-100 pts</div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- DEPOSIT -->
     <div id="page-deposit" class="page">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Identify Yourself</span>
-        </div>
-        </div>
-          <div class="qr-big" id="qr-pts-big">78 pts</div>
-            <div class="qr-caption">Deposit 22 more points worth of bottles</div>
-          </div>
-          <div class="qr-placeholder">
-            <div class="qr-locked">
-              <svg class="qr-code-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="5" y="5" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
-                <rect x="13" y="13" width="19" height="19" rx="1" fill="#0F6E56"/>
-                <rect x="60" y="5" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
-                <rect x="68" y="13" width="19" height="19" rx="1" fill="#0F6E56"/>
-                <rect x="5" y="60" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
-                <rect x="13" y="68" width="19" height="19" rx="1" fill="#0F6E56"/>
-                <rect x="50" y="50" width="8" height="8" fill="#0F6E56"/>
-                <rect x="62" y="50" width="8" height="8" fill="#0F6E56"/>
-                <rect x="74" y="50" width="8" height="8" fill="#0F6E56"/>
-                <rect x="86" y="50" width="8" height="8" fill="#0F6E56"/>
-                <rect x="50" y="62" width="8" height="8" fill="#0F6E56"/>
-                <rect x="74" y="62" width="8" height="8" fill="#0F6E56"/>
-                <rect x="62" y="74" width="8" height="8" fill="#0F6E56"/>
-                <rect x="74" y="74" width="8" height="8" fill="#0F6E56"/>
-                <rect x="86" y="74" width="8" height="8" fill="#0F6E56"/>
-                <rect x="50" y="86" width="8" height="8" fill="#0F6E56"/>
-                <rect x="86" y="86" width="8" height="8" fill="#0F6E56"/>
-              </svg>
-            </div>
-          </div>
-          <div id="qr-unlock-btn-wrap">
-            <div class="progress-bar-wrap" style="margin:10px 0 6px">
-              <div class="progress-bar" style="width:78%"></div>
-            </div>
-            <div class="progress-label"><span>0</span><span>78 / 100 pts</span></div>
-          </div>
-        </div>
+      <div class="section-head">Deposit a Bottle</div>
+
+      <div class="card" style="margin-bottom:12px">
+        <label class="input-label">Mobile number / QR ID</label>
+        <input class="input-field" type="tel" inputmode="numeric" placeholder="e.g. 09123456789" value="09171234567">
       </div>
 
       <div class="card">
-        <div class="card-header"><span class="card-title">Available Rewards</span></div>
-        <div style="display:grid;gap:8px">
-          <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-            <div style="font-size:22px">🍚</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">1 kg Rice</div><div style="font-size:11px;color:var(--color-text-secondary)">Staple food reward</div></div>
-            <span class="badge badge-green">100 pts</span>
+        <div class="card-hd"><span class="card-title">Bottle Size</span></div>
+        <div class="bottle-grid">
+          <div class="bottle-card" data-size="250mL" data-pts="0.5" onclick="selectBottle(this)">
+            
+            <div class="bottle-size">250 mL</div>
+            <div class="bottle-pts">+ 0.5 pts</div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-            <div style="font-size:22px">🥫</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Canned Goods Pack</div><div style="font-size:11px;color:var(--color-text-secondary)">Assorted sardines & corned beef</div></div>
-            <span class="badge badge-green">100 pts</span>
+          <div class="bottle-card" data-size="500mL" data-pts="1" onclick="selectBottle(this)">
+            
+            <div class="bottle-size">500 mL</div>
+            <div class="bottle-pts">+ 1 pt</div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-            <div style="font-size:22px">🍪</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">Biscuit Pack</div><div style="font-size:11px;color:var(--color-text-secondary)">Assorted biscuits</div></div>
-            <span class="badge badge-green">100 pts</span>
+          <div class="bottle-card" data-size="1L" data-pts="2" onclick="selectBottle(this)">
+            
+            <div class="bottle-size">1 L</div>
+            <div class="bottle-pts">+ 2 pts</div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
-            <div style="font-size:22px">📱</div>
-            <div style="flex:1"><div style="font-size:13px;font-weight:500;color:var(--color-text-primary)">GCash Load ₱20</div><div style="font-size:11px;color:var(--color-text-secondary)">Digital cash reward</div></div>
-            <span class="badge badge-green">100 pts</span>
+          <div class="bottle-card" data-size="1.5L" data-pts="3" onclick="selectBottle(this)">
+            
+            <div class="bottle-size">1.5 L</div>
+            <div class="bottle-pts">+ 3 pts</div>
           </div>
         </div>
+
+        <div id="deposit-summary" style="display:none">
+          <div class="summary-box">
+            <div class="summary-row"><span>Bottle size</span><span id="sum-size">—</span></div>
+            <div class="summary-row"><span>Points earned</span><span id="sum-pts">—</span></div>
+            <div class="summary-row total"><span>New total</span><span id="sum-total">—</span></div>
+          </div>
+        </div>
+
+        <button class="btn-full" id="deposit-btn" disabled onclick="doDeposit()">Confirm Deposit</button>
+      </div>
+
+      <div id="deposit-alert" class="alert alert-success" style="display:none">
+        <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#1D9E75" stroke-width="1.4"/><path d="M5 8l2 2 4-4" stroke="#1D9E75" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Bottle accepted! Points have been added to your account.
       </div>
     </div>
 
+    <!-- REDEEM -->
+    <div id="page-redeem" class="page">
+      <div class="section-head">Redeem Points</div>
+
+      <div class="qr-section">
+        <div id="qr-locked-msg">
+          <div class="qr-pts" id="qr-pts-big">78</div>
+          <div class="qr-pts-label">pts — need 100 to unlock</div>
+        </div>
+        <div class="qr-frame">
+          <div class="qr-locked" id="qr-img">
+            <svg width="110" height="110" viewBox="0 0 100 100" fill="none">
+              <rect x="5" y="5" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
+              <rect x="13" y="13" width="19" height="19" rx="1" fill="#0F6E56"/>
+              <rect x="60" y="5" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
+              <rect x="68" y="13" width="19" height="19" rx="1" fill="#0F6E56"/>
+              <rect x="5" y="60" width="35" height="35" rx="3" fill="none" stroke="#0F6E56" stroke-width="3"/>
+              <rect x="13" y="68" width="19" height="19" rx="1" fill="#0F6E56"/>
+              <rect x="50" y="50" width="8" height="8" fill="#0F6E56"/>
+              <rect x="62" y="50" width="8" height="8" fill="#0F6E56"/>
+              <rect x="74" y="50" width="8" height="8" fill="#0F6E56"/>
+              <rect x="86" y="50" width="8" height="8" fill="#0F6E56"/>
+              <rect x="50" y="62" width="8" height="8" fill="#0F6E56"/>
+              <rect x="74" y="62" width="8" height="8" fill="#0F6E56"/>
+              <rect x="62" y="74" width="8" height="8" fill="#0F6E56"/>
+              <rect x="74" y="74" width="8" height="8" fill="#0F6E56"/>
+              <rect x="86" y="74" width="8" height="8" fill="#0F6E56"/>
+              <rect x="50" y="86" width="8" height="8" fill="#0F6E56"/>
+              <rect x="86" y="86" width="8" height="8" fill="#0F6E56"/>
+            </svg>
+          </div>
+        </div>
+        <div id="qr-progress-wrap">
+          <div class="prog-wrap"><div class="prog-bar" style="width:78%" id="qr-prog-bar"></div></div>
+          <div class="prog-labels"><span>0</span><span class="current" id="qr-prog-label">78 / 100 pts</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-hd"><span class="card-title">Available Rewards</span></div>
+        <div class="reward-row"><div class="reward-info"><div class="reward-name">1 kg Rice</div><div class="reward-sub">Staple food reward</div></div><span class="badge badge-green">100 pts</span></div>
+        <div class="reward-row"><div class="reward-info"><div class="reward-name">Canned Goods Pack</div><div class="reward-sub">Sardines &amp; corned beef</div></div><span class="badge badge-green">100 pts</span></div>
+        <div class="reward-row"><div class="reward-info"><div class="reward-name">Biscuit Pack</div><div class="reward-sub">Assorted biscuits</div></div><span class="badge badge-green">100 pts</span></div>
+        <div class="reward-row"><div class="reward-info"><div class="reward-name">GCash Load ₱20</div><div class="reward-sub">Digital cash reward</div></div><span class="badge badge-green">100 pts</span></div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
     <div id="page-history" class="page">
+      <div class="card-hd" style="margin-bottom:12px">
+        <span class="section-head" style="margin-bottom:0">History</span>
+        <span class="badge badge-gray">May 2026</span>
+      </div>
       <div class="card">
-        <div class="card-header">
-          <span class="card-title">Transaction History</span>
-          <span class="badge badge-gray">May 2026</span>
-        </div>
-        <div class="transaction-list" id="history-list">
+        <div class="tx-list" id="history-list">
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
-            <div class="tx-info"><div class="tx-name">1.5L bottle</div><div class="tx-time">May 3, 9:14 AM</div></div>
-            <div class="tx-pts">+3 pts</div>
+            <div class="tx-icon deposit"><svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1.5C8 1.5 5 3.5 5 8C5 10.8 6.5 12.5 8 13C9.5 12.5 11 10.8 11 8C11 3.5 8 1.5 8 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">1.5L bottle</div><div class="tx-time">May 3 · 9:14 AM</div></div>
+            <div class="tx-pts plus">+3 pts</div>
           </div>
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
-            <div class="tx-info"><div class="tx-name">500mL bottle</div><div class="tx-time">May 3, 9:12 AM</div></div>
-            <div class="tx-pts">+1 pt</div>
+            <div class="tx-icon deposit"><svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1.5C8 1.5 5 3.5 5 8C5 10.8 6.5 12.5 8 13C9.5 12.5 11 10.8 11 8C11 3.5 8 1.5 8 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">500mL bottle</div><div class="tx-time">May 3 · 9:12 AM</div></div>
+            <div class="tx-pts plus">+1 pt</div>
           </div>
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
-            <div class="tx-info"><div class="tx-name">1L bottle</div><div class="tx-time">May 2, 3:40 PM</div></div>
-            <div class="tx-pts">+2 pts</div>
+            <div class="tx-icon deposit"><svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1.5C8 1.5 5 3.5 5 8C5 10.8 6.5 12.5 8 13C9.5 12.5 11 10.8 11 8C11 3.5 8 1.5 8 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">1L bottle</div><div class="tx-time">May 2 · 3:40 PM</div></div>
+            <div class="tx-pts plus">+2 pts</div>
           </div>
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
-            <div class="tx-info"><div class="tx-name">250mL bottle</div><div class="tx-time">May 2, 10:05 AM</div></div>
-            <div class="tx-pts">+0.5 pts</div>
+            <div class="tx-icon deposit"><svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1.5C8 1.5 5 3.5 5 8C5 10.8 6.5 12.5 8 13C9.5 12.5 11 10.8 11 8C11 3.5 8 1.5 8 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">250mL bottle</div><div class="tx-time">May 2 · 10:05 AM</div></div>
+            <div class="tx-pts plus">+0.5 pts</div>
           </div>
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="3" y="4" width="8" height="6" rx="1.5" fill="#BA7517"/></svg></div>
-            <div class="tx-info"><div class="tx-name">QR redeemed — Rice 1kg</div><div class="tx-time">Apr 30, 2:00 PM</div></div>
-            <div class="tx-pts" style="color:#BA7517">-100 pts</div>
+            <div class="tx-icon redeem"><svg width="16" height="16" fill="none" viewBox="0 0 16 16"><rect x="3" y="5" width="10" height="7" rx="1.5" fill="#BA7517"/><path d="M6 5V4C6 3.4 6.4 3 7 3H9C9.6 3 10 3.4 10 4V5" stroke="#BA7517" stroke-width="1.2"/></svg></div>
+            <div class="tx-info"><div class="tx-name">QR redeemed — Rice 1kg</div><div class="tx-time">Apr 30 · 2:00 PM</div></div>
+            <div class="tx-pts minus">-100 pts</div>
           </div>
           <div class="tx-row">
-            <div class="tx-icon"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C7 1.5 4 3 4 7C4 9.5 5.4 11 7 11.5C8.6 11 10 9.5 10 7C10 3 7 1.5 7 1.5Z" fill="#1D9E75"/></svg></div>
-            <div class="tx-info"><div class="tx-name">1L bottle</div><div class="tx-time">Apr 29, 8:30 AM</div></div>
-            <div class="tx-pts">+2 pts</div>
+            <div class="tx-icon deposit"><svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M8 1.5C8 1.5 5 3.5 5 8C5 10.8 6.5 12.5 8 13C9.5 12.5 11 10.8 11 8C11 3.5 8 1.5 8 1.5Z" fill="#1D9E75"/></svg></div>
+            <div class="tx-info"><div class="tx-name">1L bottle</div><div class="tx-time">Apr 29 · 8:30 AM</div></div>
+            <div class="tx-pts plus">+2 pts</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div id="page-leaderboard" class="page">
-      <div class="metric-row">
-        <div class="metric">
-          <div class="metric-label">Bottles This Month</div>
-          <div class="metric-value" style="color:#0F6E56">1,284</div>
-          <div class="metric-sub">in Brgy. Tetuan</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Active Recyclers</div>
-          <div class="metric-value">67</div>
-          <div class="metric-sub">residents</div>
-        </div>
-      </div>
+    <!-- Community tab removed -->
 
-      <div class="card">
-        <div class="card-header"><span class="card-title">Top Recyclers — May 2026</span></div>
-        <div>
-          <div class="leaderboard-row">
-            <div class="lb-rank gold">1</div>
-            <div class="lb-avatar" style="background:#FAEEDA;color:#633806">AM</div>
-            <div class="lb-name">Aling Maria</div>
-            <div>
-              <div class="lb-pts">243 pts</div>
-              <div class="lb-bottles">162 bottles</div>
-            </div>
-          </div>
-          <div class="leaderboard-row">
-            <div class="lb-rank silver">2</div>
-            <div class="lb-avatar" style="background:#F1EFE8;color:#444441">JR</div>
-            <div class="lb-name">Kuya Ramon</div>
-            <div>
-              <div class="lb-pts">187 pts</div>
-              <div class="lb-bottles">124 bottles</div>
-            </div>
-          </div>
-          <div class="leaderboard-row" style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:6px 8px;border-bottom:none;margin:4px 0">
-            <div class="lb-rank bronze">3</div>
-            <div class="lb-avatar">YO</div>
-            <div class="lb-name" style="font-weight:500">You (09171234567)</div>
-            <div>
-              <div class="lb-pts">78 pts</div>
-              <div class="lb-bottles">54 bottles</div>
-            </div>
-          </div>
-          <div class="leaderboard-row">
-            <div class="lb-rank">4</div>
-            <div class="lb-avatar" style="background:#FAECE7;color:#4A1B0C">LC</div>
-            <div class="lb-name">Lola Cita</div>
-            <div>
-              <div class="lb-pts">65 pts</div>
-              <div class="lb-bottles">43 bottles</div>
-            </div>
-          </div>
-          <div class="leaderboard-row">
-            <div class="lb-rank">5</div>
-            <div class="lb-avatar" style="background:#E6F1FB;color:#042C53">BP</div>
-            <div class="lb-name">Boy Paltu</div>
-            <div>
-              <div class="lb-pts">52 pts</div>
-              <div class="lb-bottles">35 bottles</div>
-            </div>
-          </div>
-          <div class="leaderboard-row" style="border-bottom:none">
-            <div class="lb-rank">6</div>
-            <div class="lb-avatar" style="background:#EAF3DE;color:#173404">NS</div>
-            <div class="lb-name">Nanay Sising</div>
-            <div>
-              <div class="lb-pts">41 pts</div>
-              <div class="lb-bottles">28 bottles</div>
-            </div>
-          </div>
-        </div>
-      </div>
+  </div><!-- /scroll-area -->
 
-      <div class="card">
-        <div class="card-header"><span class="card-title">Machine Status</span></div>
-        <div style="display:grid;gap:8px">
-          <div>
-            <div class="progress-label" style="margin-bottom:4px"><span style="font-size:12px;color:var(--color-text-secondary)">Bin fill level</span><span class="badge badge-amber">65%</span></div>
-            <div class="progress-bar-wrap"><div class="progress-bar" style="width:65%;background:#BA7517"></div></div>
-          </div>
-          <div>
-            <div class="progress-label" style="margin-bottom:4px"><span style="font-size:12px;color:var(--color-text-secondary)">Solar battery</span><span class="badge badge-green">88%</span></div>
-            <div class="progress-bar-wrap"><div class="progress-bar" style="width:88%"></div></div>
-          </div>
-        </div>
+  <!-- BOTTOM TAB BAR -->
+  <nav class="tab-bar">
+    <button class="tab active" id="tab-dashboard" onclick="showPage('dashboard',this)">
+      <div class="tab-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <rect x="3" y="3" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="11" y="3" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="3" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="11" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
       </div>
-    </div>
+      <span class="tab-label">Home</span>
+    </button>
+    <button class="tab" id="tab-deposit" onclick="showPage('deposit',this)">
+      <div class="tab-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <path d="M10 3C10 3 6.5 5 6.5 10C6.5 13 8 15 10 15.5C12 15 13.5 13 13.5 10C13.5 5 10 3 10 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M10 17V15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M7 17H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="tab-label">Deposit</span>
+    </button>
+    <button class="tab" id="tab-redeem" onclick="showPage('redeem',this)">
+      <div class="tab-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="5" y="5" width="2" height="2" fill="currentColor"/>
+          <rect x="11" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="13" y="5" width="2" height="2" fill="currentColor"/>
+          <rect x="3" y="11" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="5" y="13" width="2" height="2" fill="currentColor"/>
+          <rect x="11" y="11" width="2" height="2" fill="currentColor"/>
+          <rect x="15" y="11" width="2" height="2" fill="currentColor"/>
+          <rect x="11" y="15" width="2" height="2" fill="currentColor"/>
+          <rect x="15" y="15" width="2" height="2" fill="currentColor"/>
+        </svg>
+      </div>
+      <span class="tab-label">Redeem</span>
+    </button>
+    <button class="tab" id="tab-history" onclick="showPage('history',this)">
+      <div class="tab-icon">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 6.5V10L12.5 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="tab-label">History</span>
+    
+  </nav>
 
-  </div>
-</div>
-<div id="toast">Points added!</div>
+  <div class="toast" id="toast">Points added!</div>
 </div>
 <script src="recycoin_rvm_web_app.js"></script>
+</body>
+</html>

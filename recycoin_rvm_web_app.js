@@ -1,92 +1,79 @@
-// encapsulate app logic to avoid polluting global scope
-(function (window, document) {
-  'use strict';
+(function() {
+	'use strict';
 
-  let currentPts = 78;
-  let currentBottles = 54;
-  let selectedBottle = null;
+	let currentPts = 78;
+	let currentBottles = 54;
+	let selectedBottle = null;
 
-  function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    const page = document.getElementById('page-' + name);
-    if (page) page.classList.add('active');
-    try {
-      if (typeof event !== 'undefined' && event && event.target) {
-        event.target.classList.add('active');
-      }
-    } catch (e) { /* ignore */ }
-  }
+	window.showPage = function(name, tabEl) {
+		document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+		document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+		const pg = document.getElementById('page-' + name);
+		if (pg) pg.classList.add('active');
+		const tb = tabEl || document.getElementById('tab-' + name);
+		if (tb) tb.classList.add('active');
+		// scroll to top
+		document.querySelector('.scroll-area').scrollTop = 0;
+	};
 
-  function selectBottle(el) {
-    document.querySelectorAll('.bottle-card').forEach(c => c.classList.remove('selected'));
-    el.classList.add('selected');
-    selectedBottle = { size: el.dataset.size, pts: parseFloat(el.dataset.pts) };
-    const newTotal = currentPts + selectedBottle.pts;
-    const sumSize = document.getElementById('sum-size');
-    const sumPts = document.getElementById('sum-pts');
-    const sumTotal = document.getElementById('sum-total');
-    if (sumSize) sumSize.textContent = selectedBottle.size;
-    if (sumPts) sumPts.textContent = '+' + selectedBottle.pts + ' pts';
-    if (sumTotal) sumTotal.textContent = newTotal + ' pts';
-    const depositSummary = document.getElementById('deposit-summary');
-    if (depositSummary) depositSummary.style.display = 'block';
-    const depositBtn = document.getElementById('deposit-btn');
-    if (depositBtn) depositBtn.disabled = false;
-  }
+	window.selectBottle = function(el) {
+		document.querySelectorAll('.bottle-card').forEach(c => c.classList.remove('selected'));
+		el.classList.add('selected');
+		selectedBottle = { size: el.dataset.size, pts: parseFloat(el.dataset.pts) };
+		const newTotal = Math.round((currentPts + selectedBottle.pts) * 10) / 10;
+		document.getElementById('sum-size').textContent = selectedBottle.size;
+		document.getElementById('sum-pts').textContent = '+' + selectedBottle.pts + ' pts';
+		document.getElementById('sum-total').textContent = newTotal + ' pts';
+		document.getElementById('deposit-summary').style.display = 'block';
+		document.getElementById('deposit-btn').disabled = false;
+	};
 
-  function doDeposit() {
-    if (!selectedBottle) return;
-    currentPts = Math.round((currentPts + selectedBottle.pts) * 10) / 10;
-    currentBottles += 1;
+	window.doDeposit = function() {
+		if (!selectedBottle) return;
+		currentPts = Math.round((currentPts + selectedBottle.pts) * 10) / 10;
+		currentBottles += 1;
 
-    const ptsDisplay = document.getElementById('pts-display');
-    const bottlesDisplay = document.getElementById('bottles-display');
-    const mainProgress = document.getElementById('main-progress');
-    if (ptsDisplay) ptsDisplay.textContent = currentPts;
-    if (bottlesDisplay) bottlesDisplay.textContent = currentBottles;
-    if (mainProgress) mainProgress.style.width = Math.min(currentPts, 100) + '%';
+		// update dashboard
+		document.getElementById('pts-display').textContent = currentPts;
+		document.getElementById('bottles-display').textContent = currentBottles;
+		const pct = Math.min(currentPts, 100);
+		document.getElementById('main-progress').style.width = pct + '%';
+		document.getElementById('prog-badge').textContent = currentPts + ' / 100';
+		document.getElementById('prog-label').textContent = currentPts + ' pts';
 
-    const qrPtsBig = document.getElementById('qr-pts-big');
-    if (qrPtsBig) qrPtsBig.textContent = currentPts + ' pts';
+		// update leaderboard row
+		document.getElementById('lb-my-pts').textContent = currentPts + ' pts';
+		document.getElementById('lb-my-bottles').textContent = currentBottles + ' bottles';
 
-    const depositSummary = document.getElementById('deposit-summary');
-    if (depositSummary) depositSummary.style.display = 'none';
-    const depositBtn = document.getElementById('deposit-btn');
-    if (depositBtn) depositBtn.disabled = true;
-    document.querySelectorAll('.bottle-card').forEach(c => c.classList.remove('selected'));
-    selectedBottle = null;
+		// update redeem
+		document.getElementById('qr-pts-big').textContent = currentPts;
+		document.getElementById('qr-prog-bar').style.width = pct + '%';
+		document.getElementById('qr-prog-label').textContent = currentPts + ' / 100 pts';
 
-    const alert = document.getElementById('deposit-alert');
-    if (alert) {
-      alert.style.display = 'flex';
-      setTimeout(() => { alert.style.display = 'none'; }, 3000);
-    }
+		// reset deposit
+		document.getElementById('deposit-summary').style.display = 'none';
+		document.getElementById('deposit-btn').disabled = true;
+		document.querySelectorAll('.bottle-card').forEach(c => c.classList.remove('selected'));
+		selectedBottle = null;
 
-    const toast = document.getElementById('toast');
-    if (toast) {
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2500);
-    }
+		// alert
+		const alert = document.getElementById('deposit-alert');
+		alert.style.display = 'flex';
+		setTimeout(() => { alert.style.display = 'none'; }, 3000);
 
-    if (currentPts >= 100) {
-      const qrLocked = document.querySelector('.qr-locked');
-      if (qrLocked) {
-        qrLocked.style.filter = 'none';
-        qrLocked.style.opacity = '1';
-      }
-      const lockedMsg = document.getElementById('qr-locked-msg');
-      if (lockedMsg) lockedMsg.innerHTML = '<div style="font-size:13px;color:#0F6E56;font-weight:500;margin-bottom:6px">QR code unlocked!</div><div style="font-size:11px;color:var(--color-text-secondary)">Show this to barangay personnel</div>';
-    }
-  }
+		// toast
+		const toast = document.getElementById('toast');
+		toast.classList.add('show');
+		setTimeout(() => toast.classList.remove('show'), 2500);
 
-  // Expose for inline handlers and debugging
-  window.showPage = showPage;
-  window.selectBottle = selectBottle;
-  window.doDeposit = doDeposit;
-  window.recycoinApp = {
-    get currentPts() { return currentPts; },
-    get currentBottles() { return currentBottles; }
-  };
+		// unlock QR
+		if (currentPts >= 100) {
+			const qrImg = document.getElementById('qr-img');
+			qrImg.className = 'qr-unlocked';
+			const msg = document.getElementById('qr-locked-msg');
+			msg.innerHTML = '<div class="qr-unlocked-label">QR Code Unlocked!</div><div class="qr-pts-label">Show to barangay personnel</div>';
+			document.getElementById('qr-progress-wrap').style.display = 'none';
+		}
+	};
+})();
 
-})(window, document);
