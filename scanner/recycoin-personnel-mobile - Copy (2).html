@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#042c1e">
+<title>RECYCOIN · Personnel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --g950: #021a10;
+  --g900: #042c1e;
+  --g800: #085041;
+  --g700: #0F6E56;
+  --g600: #1D9E75;
+  --g400: #5DCAA5;
+  --g200: #9FE1CB;
+  --g100: #C8F0E3;
+  --g50:  #E1F5EE;
+  --a700: #633806;
+  --a500: #BA7517;
+  --a200: #EF9F27;
+  --a100: #FAEEDA;
+  --r700: #501313;
+  --r400: #E24B4A;
+  --r50:  #FCEBEB;
+  --n900: #0F0F0E;
+  --n700: #1C1C1A;
+  --n500: #3A3A38;
+  --n400: #5A5957;
+  --n300: #8A8986;
+  --n200: #C5C4C0;
+  --n100: #E8E6E2;
+  --n50:  #F4F3EF;
+  --white: #FFFFFF;
+  --font: 'DM Sans', system-ui, sans-serif;
+  --mono: 'DM Mono', monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 16px);
+  --tab-h: 66px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: var(--font);
+  background: var(--n900);
+  color: var(--n900);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── SHELL ─── */
+.shell {
+  display: flex; flex-direction: column;
+  height: 100%; max-width: 430px;
+  margin: 0 auto;
+  background: var(--n50);
+  position: relative; overflow: hidden;
+}
+
+/* ─── HEADER ─── */
+.header {
+  background: var(--g900);
+  padding: calc(var(--safe-top) + 14px) 18px 16px;
+  flex-shrink: 0; position: relative; z-index: 10;
+  overflow: hidden;
+}
+.header::after {
+  content: '';
+  position: absolute; bottom: -30px; right: -30px;
+  width: 100px; height: 100px;
+  background: rgba(255,255,255,.04);
+  border-radius: 50%;
+}
+.header-top { display: flex; align-items: center; gap: 11px; margin-bottom: 12px; }
+.header-logo {
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,.1);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.header-text { flex: 1; }
+.header-label {
+  font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--g400); margin-bottom: 2px;
+}
+.header-title { font-size: 17px; font-weight: 700; color: var(--white); letter-spacing: -.2px; }
+.header-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,.1);
+  border-radius: 999px; padding: 5px 11px;
+  font-size: 11px; font-weight: 500; color: var(--g200);
+}
+.pulse-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #97C459;
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.officer-row {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.07);
+  border-radius: var(--r-md);
+  padding: 8px 12px;
+}
+.officer-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--g600);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: var(--white);
+  flex-shrink: 0;
+}
+.officer-info { flex: 1; }
+.officer-name { font-size: 13px; font-weight: 600; color: var(--white); }
+.officer-role { font-size: 11px; color: var(--g200); }
+.officer-badge {
+  background: var(--g700); border-radius: 6px;
+  padding: 3px 8px; font-size: 10px; font-weight: 600;
+  color: var(--g100); letter-spacing: .3px;
+}
+
+/* ─── NAV / TABS ─── */
+.tab-bar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: calc(var(--tab-h) + var(--safe-bot));
+  background: var(--white);
+  border-top: 1px solid var(--n100);
+  display: flex; padding-bottom: var(--safe-bot);
+  z-index: 20;
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  border: none; background: transparent; cursor: pointer;
+  padding: 8px 4px; position: relative;
+}
+.tab-icon-wrap {
+  width: 28px; height: 28px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .2s;
+}
+.tab.active .tab-icon-wrap { background: var(--g50); }
+.tab svg { color: var(--n300); transition: color .2s; }
+.tab.active svg { color: var(--g700); }
+.tab-lbl { font-size: 10px; font-weight: 500; color: var(--n300); transition: color .2s; }
+.tab.active .tab-lbl { color: var(--g700); }
+.tab-badge {
+  position: absolute; top: 6px; right: calc(50% - 18px);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--r400); border: 2px solid var(--white);
+}
+
+/* ─── SCROLL ─── */
+.scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-bottom: calc(var(--tab-h) + var(--safe-bot) + 20px);
+}
+.scroll::-webkit-scrollbar { display: none; }
+.page { display: none; padding: 16px; animation: fadeUp .2s ease; }
+.page.active { display: block; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+/* ─── CARDS ─── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--n100);
+  border-radius: var(--r-lg);
+  padding: 16px; margin-bottom: 12px;
+}
+.card-hd {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+.card-title {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .8px;
+  color: var(--n300);
+}
+
+/* ─── SCANNER ─── */
+.scanner-card {
+  background: var(--g900);
+  border-radius: var(--r-xl);
+  padding: 24px 20px;
+  margin-bottom: 12px;
+  text-align: center;
+  position: relative; overflow: hidden;
+}
+.scanner-card::before {
+  content: '';
+  position: absolute; top: -50px; left: -50px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(29,158,117,.2) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.scanner-label {
+  font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .8px;
+  color: var(--g400); margin-bottom: 18px;
+}
+.scanner-frame {
+  width: 180px; height: 180px;
+  margin: 0 auto 18px;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.scanner-border {
+  position: absolute; inset: 0;
+  border: 2px solid rgba(255,255,255,.1);
+  border-radius: 16px;
+}
+.corner {
+  position: absolute;
+  width: 20px; height: 20px;
+}
+.corner::before, .corner::after {
+  content: ''; position: absolute;
+  background: var(--g400); border-radius: 2px;
+}
+.corner.tl { top: 0; left: 0; }
+.corner.tl::before { top:0; left:0; width:3px; height:20px; }
+.corner.tl::after  { top:0; left:0; width:20px; height:3px; }
+.corner.tr { top: 0; right: 0; }
+.corner.tr::before { top:0; right:0; width:3px; height:20px; }
+.corner.tr::after  { top:0; right:0; width:20px; height:3px; }
+.corner.bl { bottom: 0; left: 0; }
+.corner.bl::before { bottom:0; left:0; width:3px; height:20px; }
+.corner.bl::after  { bottom:0; left:0; width:20px; height:3px; }
+.corner.br { bottom: 0; right: 0; }
+.corner.br::before { bottom:0; right:0; width:3px; height:20px; }
+.corner.br::after  { bottom:0; right:0; width:20px; height:3px; }
+.scan-line {
+  position: absolute; left: 10px; right: 10px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--g400), transparent);
+  animation: scanMove 2s ease-in-out infinite;
+  border-radius: 1px;
+}
+@keyframes scanMove {
+  0%   { top: 10px; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 160px; opacity: 0; }
+}
+.qr-preview {
+  opacity: .15;
+  transition: opacity .4s ease;
+}
+.qr-preview.lit { opacity: 1; }
+
+.manual-section { margin-top: 0; }
+.manual-label {
+  font-size: 11px; font-weight: 500;
+  color: rgba(255,255,255,.4);
+  text-transform: uppercase; letter-spacing: .6px;
+  margin-bottom: 8px;
+}
+.manual-row { display: flex; gap: 8px; }
+.manual-input {
+  flex: 1;
+  background: rgba(255,255,255,.08);
+  border: 1.5px solid rgba(255,255,255,.15);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 14px; color: var(--white);
+  outline: none;
+  transition: border-color .15s;
+  -webkit-appearance: none;
+  text-transform: uppercase;
+}
+.manual-input::placeholder { color: rgba(255,255,255,.25); text-transform: none; }
+.manual-input:focus { border-color: var(--g400); }
+.btn-scan {
+  background: var(--g600);
+  color: var(--white);
+  border: none; border-radius: var(--r-md);
+  padding: 12px 16px;
+  font-family: var(--font);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: all .15s;
+}
+.btn-scan:active { transform: scale(.97); background: var(--g700); }
+
+.sim-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px; margin-top: 10px;
+}
+.sim-btn {
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-sm);
+  padding: 8px 4px;
+  font-family: var(--font);
+  font-size: 10px; font-weight: 500;
+  color: rgba(255,255,255,.5);
+  cursor: pointer;
+  text-align: center; transition: all .15s;
+}
+.sim-btn:active { background: rgba(255,255,255,.14); color: var(--white); }
+
+/* ─── RESULT STATES ─── */
+.result-panel { display: none; }
+.result-panel.show { display: block; animation: fadeUp .25s ease; }
+
+.result-valid   { background: var(--g50);  border: 1.5px solid var(--g400); }
+.result-used    { background: var(--a100); border: 1.5px solid var(--a200); }
+.result-invalid { background: var(--r50);  border: 1.5px solid #FFAAAA; }
+.result-done    { background: var(--g50);  border: 1.5px solid var(--g600); }
+
+.result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.result-title { font-size: 15px; font-weight: 700; }
+.result-title.g { color: var(--g800); }
+.result-title.a { color: var(--a700); }
+.result-title.r { color: var(--r700); }
+
+.resident-block {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 14px;
+}
+.r-avatar {
+  width: 46px; height: 46px; border-radius: 14px;
+  background: var(--g200);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: var(--g900);
+  flex-shrink: 0;
+}
+.r-name { font-size: 16px; font-weight: 700; color: var(--n900); }
+.r-mobile { font-size: 13px; color: var(--n400); margin-top: 1px; font-family: var(--mono); }
+
+.detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 14px;
+}
+.detail-cell {
+  background: rgba(255,255,255,.7);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+}
+.detail-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--n300); margin-bottom: 3px; }
+.detail-val { font-size: 13px; font-weight: 600; color: var(--n900); font-family: var(--mono); }
+.detail-val.green { color: var(--g700); font-family: var(--font); font-size: 15px; }
+
+.reward-picker {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 14px;
+}
+.reward-opt {
+  background: rgba(255,255,255,.8);
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  padding: 12px 10px;
+  text-align: left; cursor: pointer;
+  transition: all .15s;
+}
+.reward-opt:active { transform: scale(.97); }
+.reward-opt.picked { border-color: var(--g700); background: var(--white); }
+.reward-emoji { font-size: 24px; margin-bottom: 6px; }
+.reward-name { font-size: 13px; font-weight: 600; color: var(--n900); }
+.reward-sub { font-size: 11px; color: var(--n300); margin-top: 1px; }
+
+.btn-row { display: flex; gap: 8px; }
+.btn-confirm {
+  flex: 1;
+  background: var(--g700); color: var(--white);
+  border: none; border-radius: var(--r-md);
+  padding: 14px;
+  font-family: var(--font);
+  font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .15s;
+}
+.btn-confirm:active { background: var(--g900); transform: scale(.98); }
+.btn-confirm:disabled { background: var(--n200); color: var(--n300); cursor: not-allowed; transform: none; }
+.btn-cancel {
+  background: rgba(0,0,0,.06);
+  color: var(--n500);
+  border: none; border-radius: var(--r-md);
+  padding: 14px 18px;
+  font-family: var(--font);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.btn-cancel:active { background: rgba(0,0,0,.12); }
+.btn-full-outline {
+  width: 100%;
+  background: transparent;
+  border: 1.5px solid currentColor;
+  border-radius: var(--r-md);
+  padding: 13px;
+  font-family: var(--font);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.btn-full-outline:active { opacity: .7; }
+
+.warn-box {
+  background: rgba(255,255,255,.6);
+  border-radius: var(--r-sm);
+  padding: 11px 13px;
+  font-size: 13px; font-weight: 500;
+  display: flex; gap: 8px; align-items: flex-start;
+  margin-bottom: 14px;
+}
+.warn-box.amber { color: var(--a700); }
+.warn-box.red   { color: var(--r700); }
+
+/* ─── STEP DOTS ─── */
+.steps {
+  display: flex; align-items: center; gap: 0;
+  margin-bottom: 16px; padding: 0 4px;
+}
+.step-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--n200); flex-shrink: 0;
+  transition: all .3s;
+}
+.step-dot.done { background: var(--g600); }
+.step-dot.active { background: var(--g700); width: 24px; border-radius: 4px; }
+.step-line { flex: 1; height: 2px; background: var(--n200); margin: 0 4px; transition: background .3s; }
+.step-line.done { background: var(--g600); }
+
+/* ─── BADGES ─── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700;
+}
+.badge-g { background: var(--g50); color: var(--g800); }
+.badge-a { background: var(--a100); color: var(--a700); }
+.badge-r { background: var(--r50); color: var(--r700); }
+.badge-n { background: var(--n100); color: var(--n500); }
+.badge-done { background: var(--g700); color: var(--white); }
+
+/* ─── LOG ROWS ─── */
+.log-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--n100);
+}
+.log-row:last-child { border-bottom: none; }
+.log-av {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  background: var(--g100); color: var(--g900);
+  flex-shrink: 0;
+}
+.log-info { flex: 1; min-width: 0; }
+.log-name { font-size: 14px; font-weight: 600; color: var(--n900); }
+.log-detail { font-size: 11px; color: var(--n300); margin-top: 1px; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log-right { text-align: right; flex-shrink: 0; }
+.log-status { font-size: 12px; font-weight: 700; }
+.log-time { font-size: 11px; color: var(--n300); margin-top: 1px; }
+
+/* ─── METRICS ─── */
+.metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.metric-card {
+  background: var(--white);
+  border: 1px solid var(--n100);
+  border-radius: var(--r-lg);
+  padding: 14px 15px;
+}
+.metric-lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--n300); margin-bottom: 4px; }
+.metric-val { font-size: 28px; font-weight: 700; color: var(--n900); }
+.metric-val.green { color: var(--g700); }
+.metric-val.amber { color: var(--a500); }
+.metric-sub { font-size: 11px; color: var(--n300); margin-top: 2px; }
+
+/* ─── MACHINE ─── */
+.machine-hero {
+  background: linear-gradient(145deg, var(--g900) 0%, var(--g800) 100%);
+  border-radius: var(--r-xl);
+  padding: 18px;
+  margin-bottom: 12px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  position: relative; overflow: hidden;
+}
+.machine-hero::after {
+  content: '';
+  position: absolute; top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  background: rgba(255,255,255,.05);
+  border-radius: 50%;
+}
+.mh-stat-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--g400); margin-bottom: 3px; }
+.mh-stat-val { font-size: 22px; font-weight: 700; color: var(--white); }
+.mh-stat-sub { font-size: 11px; color: var(--g200); margin-top: 1px; }
+
+.sensor-row { margin-bottom: 12px; }
+.sensor-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.sensor-label { font-size: 13px; font-weight: 500; color: var(--n700); }
+.prog-wrap { background: var(--n100); border-radius: 999px; height: 8px; overflow: hidden; }
+.prog-bar { height: 100%; border-radius: 999px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+
+.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.action-btn {
+  background: var(--n50);
+  border: 1px solid var(--n100);
+  border-radius: var(--r-md);
+  padding: 13px 12px;
+  font-family: var(--font);
+  font-size: 13px; font-weight: 600;
+  color: var(--n700);
+  cursor: pointer; text-align: left;
+  transition: all .15s;
+}
+.action-btn:active { background: var(--n100); transform: scale(.98); }
+.action-btn.danger { background: var(--r50); color: var(--r700); border-color: #FFCCCC; }
+.action-btn .action-icon { font-size: 18px; margin-bottom: 6px; display: block; }
+
+/* ─── RESIDENTS ─── */
+.search-box {
+  width: 100%;
+  background: var(--white);
+  border: 1.5px solid var(--n100);
+  border-radius: var(--r-md);
+  padding: 12px 14px 12px 38px;
+  font-family: var(--font);
+  font-size: 14px; color: var(--n900);
+  outline: none;
+  margin-bottom: 12px;
+  -webkit-appearance: none;
+  transition: border-color .15s;
+  background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' fill='none' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='7' cy='7' r='5' stroke='%23C5C4C0' stroke-width='1.5'/%3E%3Cpath d='M11 11L14 14' stroke='%23C5C4C0' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+}
+.search-box:focus { border-color: var(--g600); }
+
+/* ─── SUCCESS ANIMATION ─── */
+.checkmark-circle {
+  width: 60px; height: 60px;
+  background: var(--g700);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px;
+  animation: popIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn { from{transform:scale(0)} to{transform:scale(1)} }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--tab-h) + var(--safe-bot) + 12px);
+  left: 16px; right: 16px;
+  background: var(--n900);
+  color: var(--white);
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-size: 13px; font-weight: 500;
+  opacity: 0; transform: translateY(8px);
+  transition: all .25s;
+  pointer-events: none; z-index: 200;
+  display: flex; align-items: center; gap: 10px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* ─── SECTION HEAD ─── */
+.sec-head {
+  font-size: 20px; font-weight: 700; color: var(--n900);
+  margin-bottom: 14px; letter-spacing: -.3px;
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="header-logo">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="2" y="2" width="7" height="7" rx="1.5" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.4"/>
+          <rect x="3.5" y="3.5" width="4" height="4" rx=".6" fill="rgba(255,255,255,.7)"/>
+          <rect x="13" y="2" width="7" height="7" rx="1.5" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.4"/>
+          <rect x="14.5" y="3.5" width="4" height="4" rx=".6" fill="rgba(255,255,255,.7)"/>
+          <rect x="2" y="13" width="7" height="7" rx="1.5" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.4"/>
+          <rect x="3.5" y="14.5" width="4" height="4" rx=".6" fill="rgba(255,255,255,.7)"/>
+          <rect x="13" y="13" width="3" height="3" fill="rgba(255,255,255,.7)"/>
+          <rect x="17" y="13" width="3" height="3" fill="rgba(255,255,255,.7)"/>
+          <rect x="13" y="17" width="3" height="3" fill="rgba(255,255,255,.7)"/>
+          <rect x="17" y="17" width="3" height="3" fill="rgba(255,255,255,.7)"/>
+        </svg>
+      </div>
+      <div class="header-text">
+        <div class="header-label">RECYCOIN</div>
+        <div class="header-title">Personnel Portal</div>
+      </div>
+      <div class="header-pill"><div class="pulse-dot"></div>Live</div>
+    </div>
+    <div class="officer-row">
+      <div class="officer-avatar">JD</div>
+      <div class="officer-info">
+        <div class="officer-name">Juana dela Cruz</div>
+        <div class="officer-role">Barangay Officer · Tetuan</div>
+      </div>
+      <div class="officer-badge">ON DUTY</div>
+    </div>
+  </div>
+
+  <!-- SCROLL CONTENT -->
+  <div class="scroll">
+
+    <!-- SCAN TAB -->
+    <div id="page-scan" class="page active">
+
+      <div class="steps" id="steps">
+        <div class="step-dot active" id="sd1"></div>
+        <div class="step-line" id="sl1"></div>
+        <div class="step-dot" id="sd2"></div>
+        <div class="step-line" id="sl2"></div>
+        <div class="step-dot" id="sd3"></div>
+      </div>
+
+      <!-- SCANNER -->
+      <div id="phase-scan">
+        <div class="scanner-card">
+          <div class="scanner-label">Scan QR Code</div>
+          <div class="scanner-frame">
+            <div class="scanner-border"></div>
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+            <div class="scan-line"></div>
+            <div class="qr-preview" id="qr-preview">
+              <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+                <rect x="5" y="5" width="35" height="35" rx="3" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.5"/>
+                <rect x="13" y="13" width="19" height="19" rx="1" fill="rgba(255,255,255,.8)"/>
+                <rect x="60" y="5" width="35" height="35" rx="3" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.5"/>
+                <rect x="68" y="13" width="19" height="19" rx="1" fill="rgba(255,255,255,.8)"/>
+                <rect x="5" y="60" width="35" height="35" rx="3" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2.5"/>
+                <rect x="13" y="68" width="19" height="19" rx="1" fill="rgba(255,255,255,.8)"/>
+                <rect x="50" y="50" width="8" height="8" fill="rgba(255,255,255,.8)"/>
+                <rect x="62" y="50" width="8" height="8" fill="rgba(255,255,255,.8)"/>
+                <rect x="74" y="50" width="8" height="8" fill="rgba(255,255,255,.8)"/>
+                <rect x="86" y="50" width="8" height="8" fill="rgba(255,255,255,.8)"/>
+                <rect x="50" y="62" width="8" height="8" fill="rgba(255,255,255,.8)"/>
+                <rect x="74" y="74" width="8" height="8" fill="rgba(255,255,255,.8)"/>
+                <rect x="62" y="86" width="8" height="8" fill="rgba(255,255,255,.8)"/>
+                <rect x="86" y="86" width="8" height="8" fill="rgba(255,255,255,.8)"/>
+              </svg>
+            </div>
+          </div>
+          <div class="manual-section">
+            <div class="manual-label">Enter code manually</div>
+            <div class="manual-row">
+              <input class="manual-input" type="text" id="qr-input" placeholder="RC-2026-XXXXX" maxlength="14">
+              <button class="btn-scan" onclick="doScan()">Verify</button>
+            </div>
+          </div>
+          <div class="sim-row">
+            <button class="sim-btn" onclick="simScan('valid')">▶ Valid QR</button>
+            <button class="sim-btn" onclick="simScan('used')">▶ Used QR</button>
+            <button class="sim-btn" onclick="simScan('invalid')">▶ Invalid</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULT: VALID -->
+      <div id="res-valid" class="result-panel card result-valid">
+        <div class="result-header">
+          <span class="result-title g">QR Verified ✓</span>
+          <span class="badge badge-g">Valid</span>
+        </div>
+        <div class="resident-block">
+          <div class="r-avatar" id="r-av">YO</div>
+          <div>
+            <div class="r-name" id="r-name">—</div>
+            <div class="r-mobile" id="r-mobile">—</div>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-cell">
+            <div class="detail-lbl">QR Code</div>
+            <div class="detail-val" id="r-qr">—</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-lbl">Points</div>
+            <div class="detail-val green">100 pts</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-lbl">Generated</div>
+            <div class="detail-val" id="r-gen">—</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-lbl">Remaining</div>
+            <div class="detail-val" id="r-bal">—</div>
+          </div>
+        </div>
+        <div class="card-title" style="margin-bottom:10px">Choose reward to distribute</div>
+        <div class="reward-picker">
+          <button class="reward-opt" onclick="pickReward(this,'Rice 1kg')">
+            <div class="reward-emoji">🍚</div>
+            <div class="reward-name">Rice 1kg</div>
+            <div class="reward-sub">Staple food</div>
+          </button>
+          <button class="reward-opt" onclick="pickReward(this,'Canned Goods')">
+            <div class="reward-emoji">🥫</div>
+            <div class="reward-name">Canned Goods</div>
+            <div class="reward-sub">Sardines / beef</div>
+          </button>
+          <button class="reward-opt" onclick="pickReward(this,'Biscuit Pack')">
+            <div class="reward-emoji">🍪</div>
+            <div class="reward-name">Biscuit Pack</div>
+            <div class="reward-sub">Assorted</div>
+          </button>
+          <button class="reward-opt" onclick="pickReward(this,'GCash ₱20')">
+            <div class="reward-emoji">📱</div>
+            <div class="reward-name">GCash ₱20</div>
+            <div class="reward-sub">Digital load</div>
+          </button>
+        </div>
+        <div class="btn-row">
+          <button class="btn-confirm" id="btn-dist" disabled onclick="doDistribute()">Confirm &amp; Distribute</button>
+          <button class="btn-cancel" onclick="resetScan()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- RESULT: USED -->
+      <div id="res-used" class="result-panel card result-used">
+        <div class="result-header">
+          <span class="result-title a">Already Redeemed</span>
+          <span class="badge badge-a">Used</span>
+        </div>
+        <div class="resident-block">
+          <div class="r-avatar" style="background:#FAEEDA;color:#633806">AM</div>
+          <div>
+            <div class="r-name">Aling Maria</div>
+            <div class="r-mobile">09187654321</div>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-cell">
+            <div class="detail-lbl">QR Code</div>
+            <div class="detail-val">RC-2026-00139</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-lbl">Used On</div>
+            <div class="detail-val">Apr 30 2:12PM</div>
+          </div>
+        </div>
+        <div class="warn-box amber">
+          <svg width="16" height="16" fill="none" viewBox="0 0 16 16" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="7" stroke="#BA7517" stroke-width="1.4"/><path d="M8 5v3.5M8 11v.5" stroke="#BA7517" stroke-width="1.5" stroke-linecap="round"/></svg>
+          This QR code was already redeemed. Do not distribute a reward.
+        </div>
+        <button class="btn-full-outline" style="color:var(--a700);border-color:var(--a500)" onclick="resetScan()">Scan Another Code</button>
+      </div>
+
+      <!-- RESULT: INVALID -->
+      <div id="res-invalid" class="result-panel card result-invalid">
+        <div class="result-header">
+          <span class="result-title r">Invalid Code</span>
+          <span class="badge badge-r">Invalid</span>
+        </div>
+        <div class="warn-box red">
+          <svg width="16" height="16" fill="none" viewBox="0 0 16 16" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="7" stroke="#501313" stroke-width="1.4"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#501313" stroke-width="1.5" stroke-linecap="round"/></svg>
+          This code does not match any record. Do not distribute a reward.
+        </div>
+        <button class="btn-full-outline" style="color:var(--r700);border-color:var(--r400)" onclick="resetScan()">Try Again</button>
+      </div>
+
+      <!-- RESULT: DONE -->
+      <div id="res-done" class="result-panel card result-done">
+        <div class="checkmark-circle">
+          <svg width="28" height="28" fill="none" viewBox="0 0 28 28">
+            <path d="M7 14l5 5 9-9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:18px;font-weight:700;color:var(--g800);margin-bottom:4px">Reward Distributed</div>
+          <div style="font-size:13px;color:var(--n400)">Transaction archived successfully</div>
+        </div>
+        <div class="resident-block">
+          <div class="r-avatar" id="d-av">YO</div>
+          <div>
+            <div class="r-name" id="d-name">—</div>
+            <div class="r-mobile" style="color:var(--g700);font-weight:600" id="d-reward">—</div>
+          </div>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-cell">
+            <div class="detail-lbl">Transaction ID</div>
+            <div class="detail-val" id="d-txid" style="font-size:11px">—</div>
+          </div>
+          <div class="detail-cell">
+            <div class="detail-lbl">Officer</div>
+            <div class="detail-val" style="font-family:var(--font);font-size:12px">J. dela Cruz</div>
+          </div>
+          <div class="detail-cell" style="grid-column:span 2">
+            <div class="detail-lbl">Timestamp</div>
+            <div class="detail-val" id="d-time" style="font-family:var(--font);font-size:12px">—</div>
+          </div>
+        </div>
+        <button class="btn-confirm" onclick="resetScan()">Scan Next Resident</button>
+      </div>
+
+    </div><!-- /page-scan -->
+
+    <!-- LOG TAB -->
+    <div id="page-log" class="page">
+      <div class="sec-head">Redemption Log</div>
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-lbl">Today</div>
+          <div class="metric-val green" id="today-cnt">3</div>
+          <div class="metric-sub">redemptions</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-lbl">This month</div>
+          <div class="metric-val" id="month-cnt">18</div>
+          <div class="metric-sub">total</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">All Transactions</span>
+          <span class="badge badge-n">May 2026</span>
+        </div>
+        <div id="log-list">
+          <div class="log-row">
+            <div class="log-av">YO</div>
+            <div class="log-info"><div class="log-name">You (09171234567)</div><div class="log-detail">RC-2026-00142 · Rice 1kg</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">Distributed</div><div class="log-time">May 3, 9:30</div></div>
+          </div>
+          <div class="log-row">
+            <div class="log-av" style="background:#FAEEDA;color:#633806">JR</div>
+            <div class="log-info"><div class="log-name">Kuya Ramon</div><div class="log-detail">RC-2026-00141 · GCash ₱20</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">Distributed</div><div class="log-time">May 3, 8:15</div></div>
+          </div>
+          <div class="log-row">
+            <div class="log-av" style="background:#E6F1FB;color:#042C53">BP</div>
+            <div class="log-info"><div class="log-name">Boy Paltu</div><div class="log-detail">RC-2026-00140 · Biscuit Pack</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">Distributed</div><div class="log-time">May 3, 7:55</div></div>
+          </div>
+          <div class="log-row">
+            <div class="log-av" style="background:#FAEEDA;color:#633806">AM</div>
+            <div class="log-info"><div class="log-name">Aling Maria</div><div class="log-detail">RC-2026-00139 · Rice 1kg</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">Distributed</div><div class="log-time">Apr 30, 14:12</div></div>
+          </div>
+          <div class="log-row">
+            <div class="log-av" style="background:var(--r50);color:var(--r700)">—</div>
+            <div class="log-info"><div class="log-name">Unknown scan</div><div class="log-detail">RC-FAKE-99999</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--r700)">Rejected</div><div class="log-time">Apr 27, 16:05</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESIDENTS TAB -->
+    <div id="page-residents" class="page">
+      <div class="sec-head">Residents</div>
+      <input class="search-box" type="search" placeholder="Search name or mobile…" oninput="filterResidents(this.value)">
+      <div class="card" style="padding:0 16px">
+        <div id="res-list">
+          <div class="log-row" data-search="aling maria 09187654321">
+            <div class="log-av" style="background:#FAEEDA;color:#633806">AM</div>
+            <div class="log-info"><div class="log-name">Aling Maria</div><div class="log-detail">09187654321 · since Jan 2026</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">243 pts</div><div class="log-time">Last: May 3</div></div>
+          </div>
+          <div class="log-row" data-search="kuya ramon 09191234567">
+            <div class="log-av" style="background:#F1EFE8;color:#5A5957">JR</div>
+            <div class="log-info"><div class="log-name">Kuya Ramon</div><div class="log-detail">09191234567 · since Feb 2026</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">187 pts</div><div class="log-time">Last: May 3</div></div>
+          </div>
+          <div class="log-row" data-search="you 09171234567">
+            <div class="log-av">YO</div>
+            <div class="log-info"><div class="log-name">You (09171234567)</div><div class="log-detail">09171234567 · since Mar 2026</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">78 pts</div><div class="log-time">Last: May 3</div></div>
+          </div>
+          <div class="log-row" data-search="lola cita 09182345678">
+            <div class="log-av" style="background:#F1EFE8;color:#5A5957">LC</div>
+            <div class="log-info"><div class="log-name">Lola Cita</div><div class="log-detail">09182345678 · since Jan 2026</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">65 pts</div><div class="log-time">Last: Apr 28</div></div>
+          </div>
+          <div class="log-row" data-search="boy paltu 09193456789">
+            <div class="log-av" style="background:#E6F1FB;color:#042C53">BP</div>
+            <div class="log-info"><div class="log-name">Boy Paltu</div><div class="log-detail">09193456789 · since Feb 2026</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">52 pts</div><div class="log-time">Last: May 3</div></div>
+          </div>
+          <div class="log-row" data-search="nanay sising 09194567890">
+            <div class="log-av" style="background:#EAF3DE;color:#173404">NS</div>
+            <div class="log-info"><div class="log-name">Nanay Sising</div><div class="log-detail">09194567890 · since Mar 2026</div></div>
+            <div class="log-right"><div class="log-status" style="color:var(--g700)">41 pts</div><div class="log-time">Last: Apr 29</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MACHINE TAB -->
+    <div id="page-machine" class="page">
+      <div class="sec-head">Machine Status</div>
+      <div class="machine-hero">
+        <div>
+          <div class="mh-stat-lbl">Status</div>
+          <div class="mh-stat-val" style="color:#97C459">Online</div>
+          <div class="mh-stat-sub">since 6:00 AM</div>
+        </div>
+        <div>
+          <div class="mh-stat-lbl">Accepted today</div>
+          <div class="mh-stat-val">27</div>
+          <div class="mh-stat-sub">bottles</div>
+        </div>
+        <div>
+          <div class="mh-stat-lbl">Battery</div>
+          <div class="mh-stat-val">88%</div>
+          <div class="mh-stat-sub">charging</div>
+        </div>
+        <div>
+          <div class="mh-stat-lbl">Bin level</div>
+          <div class="mh-stat-val" style="color:#EF9F27">65%</div>
+          <div class="mh-stat-sub">monitor soon</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-title">Sensor Readings</span><span class="badge badge-g">Live</span></div>
+        <div class="sensor-row">
+          <div class="sensor-top"><span class="sensor-label">Collection bin</span><span class="badge badge-a">65%</span></div>
+          <div class="prog-wrap"><div class="prog-bar" style="width:65%;background:var(--a500)"></div></div>
+        </div>
+        <div class="sensor-row">
+          <div class="sensor-top"><span class="sensor-label">Solar battery</span><span class="badge badge-g">88%</span></div>
+          <div class="prog-wrap"><div class="prog-bar" style="width:88%;background:var(--g600)"></div></div>
+        </div>
+        <div class="sensor-row">
+          <div class="sensor-top"><span class="sensor-label">Camera / optical</span><span class="badge badge-g">OK</span></div>
+          <div class="prog-wrap"><div class="prog-bar" style="width:100%;background:var(--g600)"></div></div>
+        </div>
+        <div class="sensor-row" style="margin-bottom:0">
+          <div class="sensor-top"><span class="sensor-label">Wi-Fi signal</span><span class="badge badge-g">Strong</span></div>
+          <div class="prog-wrap"><div class="prog-bar" style="width:92%;background:var(--g600)"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-title">Maintenance</span></div>
+        <div class="action-grid">
+          <button class="action-btn" onclick="showToast('🗑️ Bin alert sent to waste management.')">
+            <span class="action-icon">🗑️</span>Empty Bin Alert
+          </button>
+          <button class="action-btn" onclick="showToast('📥 Daily report downloaded.')">
+            <span class="action-icon">📥</span>Download Report
+          </button>
+          <button class="action-btn" onclick="showToast('🔄 Machine restarting…')">
+            <span class="action-icon">🔄</span>Restart Machine
+          </button>
+          <button class="action-btn danger" onclick="showToast('⏸️ Machine paused. No deposits accepted.')">
+            <span class="action-icon">⏸️</span>Pause Machine
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+
+  <!-- BOTTOM TAB BAR -->
+  <nav class="tab-bar">
+    <button class="tab active" id="tab-scan" onclick="switchTab('scan',this)">
+      <div class="tab-icon-wrap">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <rect x="3" y="3" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="3.5" y="3.5" width="4" height="4" rx=".5"/>
+          <rect x="12" y="3" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="3" y="12" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="12" y="12" width="2" height="2" fill="currentColor"/>
+          <rect x="15.5" y="12" width="2" height="2" fill="currentColor"/>
+          <rect x="12" y="15.5" width="2" height="2" fill="currentColor"/>
+          <rect x="15.5" y="15.5" width="2" height="2" fill="currentColor"/>
+        </svg>
+      </div>
+      <span class="tab-lbl">Scan</span>
+    </button>
+    <button class="tab" id="tab-log" onclick="switchTab('log',this)">
+      <div class="tab-icon-wrap">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M6.5 7h7M6.5 10h7M6.5 13h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="tab-lbl">Log</span>
+    </button>
+    <button class="tab" id="tab-residents" onclick="switchTab('residents',this)">
+      <div class="tab-icon-wrap">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <circle cx="10" cy="7" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="tab-lbl">Residents</span>
+    </button>
+    <button class="tab" id="tab-machine" onclick="switchTab('machine',this)">
+      <div class="tab-icon-wrap">
+        <svg width="20" height="20" fill="none" viewBox="0 0 20 20">
+          <circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10 3v2M10 15v2M3 10h2M15 10h2M5.05 5.05l1.41 1.41M13.54 13.54l1.41 1.41M5.05 14.95l1.41-1.41M13.54 6.46l1.41-1.41" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="tab-lbl">Machine</span>
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  let curRes = null;
+  let chosenReward = null;
+
+  // ─── TABS ───
+  window.switchTab = function(name, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('page-' + name).classList.add('active');
+    (btn || document.getElementById('tab-' + name)).classList.add('active');
+    document.querySelector('.scroll').scrollTop = 0;
+  };
+
+  // ─── STEPS ───
+  function setStep(n) {
+    const dots = [document.getElementById('sd1'), document.getElementById('sd2'), document.getElementById('sd3')];
+    const lines = [document.getElementById('sl1'), document.getElementById('sl2')];
+    dots.forEach((d, i) => {
+      d.className = 'step-dot' + (i + 1 < n ? ' done' : i + 1 === n ? ' active' : '');
+    });
+    lines.forEach((l, i) => {
+      l.className = 'step-line' + (i + 1 < n ? ' done' : '');
+    });
+  }
+
+  // ─── SCAN ───
+  window.simScan = function(type) {
+    const codes = { valid: 'RC-2026-00142', used: 'RC-2026-00139', invalid: 'RC-FAKE-99999' };
+    document.getElementById('qr-input').value = codes[type];
+    doScan(type);
+  };
+
+  window.doScan = function(forceType) {
+    const val = document.getElementById('qr-input').value.trim().toUpperCase();
+    const type = forceType || (val === 'RC-2026-00142' ? 'valid' : val === 'RC-2026-00139' ? 'used' : 'invalid');
+
+    hideAllResults();
+    setStep(2);
+    document.getElementById('qr-preview').classList.add('lit');
+
+    if (type === 'valid') {
+      curRes = {
+        name: 'You (09171234567)', mobile: '09171234567',
+        av: 'YO', avBg: '#C8F0E3', avCol: '#042c1e',
+        qr: 'RC-2026-00142', gen: 'May 3 · 8:00 AM', bal: '0 pts after'
+      };
+      document.getElementById('r-av').textContent = curRes.av;
+      document.getElementById('r-av').style.background = curRes.avBg;
+      document.getElementById('r-av').style.color = curRes.avCol;
+      document.getElementById('r-name').textContent = curRes.name;
+      document.getElementById('r-mobile').textContent = curRes.mobile;
+      document.getElementById('r-qr').textContent = curRes.qr;
+      document.getElementById('r-gen').textContent = curRes.gen;
+      document.getElementById('r-bal').textContent = curRes.bal;
+      chosenReward = null;
+      document.querySelectorAll('.reward-opt').forEach(o => o.classList.remove('picked'));
+      document.getElementById('btn-dist').disabled = true;
+      show('res-valid');
+    } else if (type === 'used') {
+      show('res-used');
+    } else {
+      show('res-invalid');
+    }
+  };
+
+  window.pickReward = function(el, name) {
+    document.querySelectorAll('.reward-opt').forEach(o => o.classList.remove('picked'));
+    el.classList.add('picked');
+    chosenReward = name;
+    document.getElementById('btn-dist').disabled = false;
+  };
+
+  window.doDistribute = function() {
+    if (!curRes || !chosenReward) return;
+    const txid = 'TXN-' + Math.floor(Math.random() * 90000 + 10000);
+    const now = new Date();
+    const ts = 'May 3, 2026 · ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+
+    document.getElementById('d-av').textContent = curRes.av;
+    document.getElementById('d-av').style.background = curRes.avBg;
+    document.getElementById('d-av').style.color = curRes.avCol;
+    document.getElementById('d-name').textContent = curRes.name;
+    document.getElementById('d-reward').textContent = chosenReward + ' distributed';
+    document.getElementById('d-txid').textContent = txid;
+    document.getElementById('d-time').textContent = ts;
+
+    hideAllResults();
+    show('res-done');
+    setStep(3);
+
+    // update log counts
+    const tc = document.getElementById('today-cnt');
+    tc.textContent = parseInt(tc.textContent) + 1;
+    const mc = document.getElementById('month-cnt');
+    mc.textContent = parseInt(mc.textContent) + 1;
+
+    // prepend log entry
+    const ll = document.getElementById('log-list');
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    row.innerHTML = `
+      <div class="log-av" style="background:${curRes.avBg};color:${curRes.avCol}">${curRes.av}</div>
+      <div class="log-info"><div class="log-name">${curRes.name}</div><div class="log-detail">${curRes.qr} · ${chosenReward}</div></div>
+      <div class="log-right"><div class="log-status" style="color:var(--g700)">Distributed</div><div class="log-time">Just now</div></div>
+    `;
+    ll.prepend(row);
+    showToast('✅ Transaction archived. Reward given to resident.');
+  };
+
+  window.resetScan = function() {
+    hideAllResults();
+    document.getElementById('qr-input').value = '';
+    document.getElementById('qr-preview').classList.remove('lit');
+    curRes = null; chosenReward = null;
+    setStep(1);
+    document.querySelector('.scroll').scrollTop = 0;
+  };
+
+  // ─── RESIDENTS SEARCH ───
+  window.filterResidents = function(q) {
+    const term = q.toLowerCase();
+    document.querySelectorAll('#res-list .log-row').forEach(r => {
+      r.style.display = r.dataset.search.includes(term) ? '' : 'none';
+    });
+  };
+
+  // ─── TOAST ───
+  window.showToast = function(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  };
+
+  // ─── HELPERS ───
+  function show(id) { document.getElementById(id).classList.add('show'); }
+  function hideAllResults() {
+    ['res-valid','res-used','res-invalid','res-done'].forEach(id => {
+      document.getElementById(id).classList.remove('show');
+    });
+  }
+})();
+</script>
+</body>
+</html>
