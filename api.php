@@ -129,7 +129,7 @@ elseif ($action === 'login') {
     }
 }
 
-// 6. Get User History Logs
+// 6. Get User History Logs (Individual)
 elseif ($action === 'get_history') {
     $qr = $_GET['qr'] ?? '';
     $stmt = $pdo->prepare("SELECT id FROM users WHERE qr_code = ?");
@@ -139,7 +139,6 @@ elseif ($action === 'get_history') {
     if ($user) {
         $userId = $user['id'];
         
-        // Fetch and merge both deposits and redemptions
         $query = $pdo->prepare("
             SELECT 'deposit' as type, points_earned as points, created_at, bottle_size as detail
             FROM deposits WHERE user_id = ?
@@ -155,5 +154,35 @@ elseif ($action === 'get_history') {
     } else {
         echo json_encode(['status' => 'error', 'message' => 'User not found']);
     }
+}
+
+// 7. Update Admin Credentials
+elseif ($action === 'update_admin') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = $data['id'] ?? 1; // Assuming default admin is ID 1
+    $username = $data['username'] ?? '';
+    $password = $data['password'] ?? '';
+    
+    if ($username && $password) {
+        $stmt = $pdo->prepare("UPDATE personnel SET username = ?, password_hash = ? WHERE id = ?");
+        $stmt->execute([$username, $password, $id]);
+        echo json_encode(['status' => 'success']);
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid data']);
+    }
+}
+
+// 8. Get All History (Global for Personnel)
+elseif ($action === 'get_all_history') {
+    $query = $pdo->query("
+        SELECT 'deposit' as type, u.full_name, d.points_earned as points, d.created_at, d.bottle_size as detail
+        FROM deposits d JOIN users u ON d.user_id = u.id
+        UNION ALL
+        SELECT 'redemption' as type, u.full_name, r.points_deducted as points, r.created_at, r.reward_item as detail
+        FROM redemptions r JOIN users u ON r.user_id = u.id
+        ORDER BY created_at DESC LIMIT 100
+    ");
+    $history = $query->fetchAll(PDO::FETCH_ASSOC);
+    echo json_encode(['status' => 'success', 'data' => $history]);
 }
 ?>

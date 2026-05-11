@@ -7,6 +7,12 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- Favicon / Logo for browser tab -->
+<link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
+<link rel="shortcut icon" href="assets/logo.png">
+<link rel="apple-touch-icon" href="assets/logo.png">
+
 <style>
     :root {
         --green-900: #042c1e; --green-800: #0a5c46; --green-700: #0F6E56; --green-400: #5DCAA5;
@@ -82,7 +88,7 @@
         <!-- ACTION BUTTON -->
         <button onclick="openDepositModal()" class="w-full bg-[var(--green-700)] text-white font-bold py-4 rounded-xl shadow-lg shadow-green-900/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 mb-6">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            Insert Bottle (Open RVM)
+            Insert Bottle
         </button>
 
     </div>
