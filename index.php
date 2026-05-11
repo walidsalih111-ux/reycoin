@@ -17,7 +17,6 @@
     .header-curved { background: var(--green-900); border-radius: 0 0 24px 24px; padding: 24px 20px 40px; color: white; }
     .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); margin-bottom: 16px; }
     
-    /* Toast */
     #toast {
         position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(100px);
         background: #1a1a1a; color: white; padding: 12px 24px; border-radius: 30px;
@@ -31,14 +30,20 @@
 
 <div class="app-container">
     
+    <!-- HEADER -->
     <div class="header-curved">
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">RECYCOIN</h1>
-                <p class="text-green-400 text-sm opacity-80" id="user-name">Loading...</p>
+                <p class="text-green-400 text-sm opacity-80" id="user-name">Connecting...</p>
             </div>
-            <div class="bg-white/10 p-2 rounded-full backdrop-blur-sm">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            
+            <!-- CHANGED: Log History Icon -->
+            <div onclick="showHistory()" class="bg-white/10 p-2 rounded-full backdrop-blur-sm cursor-pointer active:scale-95 transition-transform">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
             </div>
         </div>
 
@@ -49,41 +54,46 @@
         </div>
     </div>
 
+    <!-- MAIN CONTENT -->
     <div class="px-5 -mt-6 relative z-10">
         
+        <!-- QR CODE CARD -->
         <div class="card text-center relative overflow-hidden border border-gray-100">
             <div class="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-bl-full -z-10"></div>
             <h3 class="font-bold text-gray-800 mb-1">My Resident ID</h3>
-            <p class="text-xs text-gray-500 mb-4">Scan this at the RVM or to redeem rewards</p>
+            <p class="text-xs text-gray-500 mb-4">Scan this to barangay personnel to redeem your 100 points and claim your incentives at the Barangay Tetuan.</p>
             
             <div class="bg-white p-3 rounded-xl inline-block border-2 border-gray-100 shadow-sm mb-2">
                 <div id="qrcode"></div>
             </div>
-            <p class="font-mono text-sm font-medium text-gray-600 tracking-wider mt-1" id="qr-text">RC-XXXX-XXXX</p>
+            <p class="font-mono text-sm font-medium text-gray-600 tracking-wider mt-1" id="qr-text">Loading...</p>
         </div>
 
+        <!-- ACTION BUTTON -->
         <button onclick="openDepositModal()" class="w-full bg-[var(--green-700)] text-white font-bold py-4 rounded-xl shadow-lg shadow-green-900/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 mb-6">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            Insert Bottle     </button>
+            Insert Bottle (Open RVM)
+        </button>
 
     </div>
 
     <div id="toast"></div>
 
+    <!-- RVM DEPOSIT MODAL -->
     <div id="deposit-modal" class="fixed inset-0 bg-black/80 hidden z-50 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 relative shadow-2xl">
             
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-[var(--green-900)]"></h2>
+                <h2 class="text-xl font-bold text-[var(--green-900)]">RVM Disposal</h2>
                 <div class="bg-red-100 text-red-600 font-mono px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span id="timer-display">01:00</span>
                 </div>
             </div>
 
+            <!-- Webcam Feed Container -->
             <div class="bg-black w-full h-56 rounded-xl mb-3 overflow-hidden relative shadow-inner">
                 <video id="webcam-feed" autoplay playsinline class="w-full h-full object-cover"></video>
-                
                 <div class="absolute inset-0 border-4 border-dashed border-white/20 pointer-events-none rounded-xl m-2"></div>
                 <div id="scan-line" class="absolute top-0 left-0 w-full h-1 bg-green-400 shadow-[0_0_10px_#5DCAA5] pointer-events-none opacity-50" style="animation: scan 2s linear infinite;"></div>
             </div>
@@ -93,6 +103,7 @@
                 <span class="text-[var(--green-700)] font-medium">Small = 1pt | Medium = 2pts | Large = 3pts</span>
             </p>
 
+            <!-- Session Stats -->
             <div class="bg-[var(--green-50)] p-4 rounded-xl mb-5 flex justify-between items-center border border-[var(--green-200)]">
                 <div>
                     <span class="block text-sm text-[var(--green-900)] opacity-80">Accumulated Points</span>
@@ -101,11 +112,13 @@
                 <span class="text-3xl font-black text-[var(--green-700)]" id="session-total-pts">0</span>
             </div>
 
+            <!-- Action Buttons -->
             <div class="flex gap-3">
                 <button onclick="closeDepositModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold active:bg-gray-200 transition-colors">Cancel</button>
                 <button onclick="confirmBalance()" class="flex-[2] py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md active:bg-[var(--green-800)] transition-colors">Confirm Balance</button>
             </div>
 
+            <!-- DEVELOPMENT ONLY -->
             <div class="mt-6 pt-4 border-t border-gray-200">
                 <p class="text-[10px] text-gray-400 text-center mb-2 uppercase tracking-wider">Dev Tools: Simulate Hardware Detection</p>
                 <div class="flex justify-center gap-2">
@@ -121,17 +134,12 @@
 </div>
 
 <style>
-    @keyframes scan {
-        0% { top: 0; }
-        50% { top: 100%; }
-        100% { top: 0; }
-    }
+    @keyframes scan { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
 </style>
 
 <script>
     // --- APP CONFIG ---
-    // Hardcoded QR for the Resident prototype
-    const MY_QR_CODE = 'RC-2026-001'; 
+    let myAssignedQR = null; // Dynamically fetched from Pi
     
     // --- STATE ---
     let timerInterval;
@@ -147,6 +155,10 @@
         setTimeout(() => t.classList.remove('show'), 3000);
     }
 
+    function showHistory() {
+        showToast("📜 History log feature coming soon!");
+    }
+
     function generateQRCode(text) {
         document.getElementById("qrcode").innerHTML = "";
         new QRCode(document.getElementById("qrcode"), {
@@ -157,22 +169,39 @@
         document.getElementById('qr-text').innerText = text;
     }
 
-    async function fetchMyData() {
+    // Connect to Raspberry Pi to fetch/generate identity based on IP address
+    async function initApp() {
         try {
-            let res = await fetch(`api.php?action=get_user&qr=${MY_QR_CODE}`);
+            let res = await fetch(`api.php?action=init_session`);
             let json = await res.json();
             
             if(json.status === 'success') {
+                myAssignedQR = json.data.qr_code;
                 document.getElementById('user-name').innerText = json.data.full_name;
                 document.getElementById('total-points').innerText = parseFloat(json.data.total_points).toFixed(2);
-                generateQRCode(json.data.qr_code);
+                generateQRCode(myAssignedQR);
             }
-        } catch(e) { console.error("API Error", e); }
+        } catch(e) { 
+            console.error("API Error", e);
+            document.getElementById('user-name').innerText = "Connection Error";
+        }
+    }
+
+    // Refresh only the points (used for polling)
+    async function refreshPoints() {
+        if(!myAssignedQR) return;
+        try {
+            let res = await fetch(`api.php?action=get_user&qr=${myAssignedQR}`);
+            let json = await res.json();
+            if(json.status === 'success') {
+                document.getElementById('total-points').innerText = parseFloat(json.data.total_points).toFixed(2);
+            }
+        } catch(e) {}
     }
 
     // --- MODAL & RVM LOGIC ---
-
     async function openDepositModal() {
+        if(!myAssignedQR) { showToast("Establishing secure connection first..."); return; }
         document.getElementById('deposit-modal').classList.remove('hidden');
         sessionPoints = 0;
         sessionBottles = 0;
@@ -202,7 +231,6 @@
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 showToast('Time is up! Session closed.');
-                // Auto-confirm balance if time runs out and they have points
                 if(sessionPoints > 0) confirmBalance(); 
                 else closeDepositModal();
             }
@@ -219,30 +247,22 @@
         try {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             document.getElementById('webcam-feed').srcObject = stream;
-        } catch (err) {
-            console.error("Webcam error:", err);
-            // Non-blocking error, just shows a black box if no webcam
-        }
+        } catch (err) { console.error("Webcam error:", err); }
     }
 
     function stopWebcam() {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-        }
+        if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
     }
 
-    // This function acts as the bridge between your Hardware/ML model and the UI.
     function triggerDetection(isPet, sizeLabel, pointsValue) {
         if (isPet) {
             sessionPoints += pointsValue;
             sessionBottles++;
             updateSessionUI();
-            startTimer(); // Reset timer to 60s
-            showToast(`✅ Valid PET (${sizeLabel})! +${pointsValue} pts. Timer reset.`);
+            startTimer(); 
+            showToast(`✅ Valid PET (${sizeLabel})! +${pointsValue} pts.`);
         } else {
             showToast('❌ Invalid bottle detected. Please remove.');
-            // Note: Timer does NOT reset here
         }
     }
 
@@ -254,12 +274,11 @@
         }
         
         try {
-            // Sending the bulk session points to the API
             let res = await fetch('api.php?action=deposit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    qr: MY_QR_CODE, 
+                    qr: myAssignedQR, 
                     size: `Bulk Deposit (${sessionBottles} bottles)`, 
                     points: sessionPoints 
                 })
@@ -268,21 +287,17 @@
             
             if (json.status === 'success') {
                 showToast(`Success! ${sessionPoints} points added to balance.`);
-                fetchMyData(); // Refresh the main UI numbers
+                refreshPoints(); 
                 closeDepositModal();
-            } else {
-                showToast('Error saving data.');
-            }
-        } catch(e) {
-            showToast('Network error during checkout.');
-        }
+            } else { showToast('Error saving data.'); }
+        } catch(e) { showToast('Network error during checkout.'); }
     }
 
-    // Load main data on start
+    // Run connection logic when page loads
     window.onload = () => {
-        fetchMyData();
-        // Poll every 5 seconds to show real-time updates if Personnel deducts points
-        setInterval(fetchMyData, 5000); 
+        initApp();
+        // Poll every 5 seconds to sync points
+        setInterval(refreshPoints, 5000); 
     };
 </script>
 

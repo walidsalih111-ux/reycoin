@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 11, 2026 at 08:49 AM
+-- Generation Time: May 11, 2026 at 08:10 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -40,38 +40,7 @@ CREATE TABLE `deposits` (
 --
 
 INSERT INTO `deposits` (`id`, `user_id`, `bottle_size`, `points_earned`, `created_at`) VALUES
-(1, 1, 'Large', 2.50, '2026-05-10 17:42:03'),
-(2, 1, 'Large', 2.50, '2026-05-10 17:42:05'),
-(3, 1, 'Large', 2.50, '2026-05-10 17:42:06'),
-(4, 1, 'Large', 2.50, '2026-05-10 17:42:07'),
-(5, 1, 'Large', 2.50, '2026-05-10 17:42:08'),
-(6, 1, 'Large', 2.50, '2026-05-10 17:42:09'),
-(7, 1, 'Large', 2.50, '2026-05-10 17:42:52'),
-(8, 1, 'Large', 2.50, '2026-05-10 17:42:53'),
-(9, 1, 'Large', 2.50, '2026-05-10 17:42:54'),
-(10, 1, 'Large', 2.50, '2026-05-10 17:43:51'),
-(11, 1, 'Large', 2.50, '2026-05-10 17:43:52'),
-(12, 1, 'Large', 2.50, '2026-05-10 17:43:53'),
-(13, 1, 'Large', 2.50, '2026-05-10 17:43:53'),
-(14, 1, 'Large', 2.50, '2026-05-10 17:43:54'),
-(15, 1, 'Large', 2.50, '2026-05-10 17:43:55'),
-(16, 1, 'Large', 2.50, '2026-05-10 17:43:55'),
-(17, 1, 'Large', 2.50, '2026-05-10 17:43:56'),
-(18, 1, 'Large', 2.50, '2026-05-10 17:43:56'),
-(19, 1, 'Large', 2.50, '2026-05-10 17:43:57'),
-(20, 1, 'Large', 2.50, '2026-05-10 17:43:57'),
-(21, 1, 'Large', 2.50, '2026-05-10 17:43:58'),
-(22, 1, 'Large', 2.50, '2026-05-10 17:43:59'),
-(23, 1, 'Large', 2.50, '2026-05-10 17:43:59'),
-(24, 1, 'Large', 2.50, '2026-05-10 17:44:00'),
-(25, 1, 'Large', 2.50, '2026-05-10 17:44:00'),
-(26, 1, 'Large', 2.50, '2026-05-10 17:44:01'),
-(27, 1, 'Large', 2.50, '2026-05-10 17:56:11'),
-(28, 1, 'Large', 2.50, '2026-05-10 17:56:12'),
-(29, 1, 'Large', 2.50, '2026-05-10 17:56:13'),
-(30, 1, 'Large', 2.50, '2026-05-10 17:56:14'),
-(31, 1, 'Large', 2.50, '2026-05-10 17:58:41'),
-(32, 1, 'Large', 2.50, '2026-05-10 17:58:42');
+(1, 1, 'Bulk Deposit (34 bot', 102.00, '2026-05-11 18:08:02');
 
 -- --------------------------------------------------------
 
@@ -82,16 +51,16 @@ INSERT INTO `deposits` (`id`, `user_id`, `bottle_size`, `points_earned`, `create
 CREATE TABLE `personnel` (
   `id` int(11) NOT NULL,
   `username` varchar(50) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `full_name` varchar(100) NOT NULL
+  `password_hash` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `personnel`
 --
 
-INSERT INTO `personnel` (`id`, `username`, `password`, `full_name`) VALUES
-(1, 'admin', 'admin123', 'Al-Raji Theng');
+INSERT INTO `personnel` (`id`, `username`, `password_hash`, `created_at`) VALUES
+(1, 'admin', 'password_placeholder_here', '2026-05-11 17:46:30');
 
 -- --------------------------------------------------------
 
@@ -108,16 +77,6 @@ CREATE TABLE `redemptions` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `redemptions`
---
-
-INSERT INTO `redemptions` (`id`, `user_id`, `personnel_id`, `reward_item`, `points_deducted`, `created_at`) VALUES
-(1, 1, 1, '1kg Rice', 50.00, '2026-05-10 17:42:32'),
-(2, 1, 1, 'Canned Goods', 30.00, '2026-05-10 17:44:14'),
-(3, 1, 1, '1kg Rice', 50.00, '2026-05-10 17:44:24'),
-(4, 1, 1, 'Canned Goods', 30.00, '2026-05-10 17:59:20');
-
 -- --------------------------------------------------------
 
 --
@@ -126,10 +85,10 @@ INSERT INTO `redemptions` (`id`, `user_id`, `personnel_id`, `reward_item`, `poin
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
+  `ip_address` varchar(45) NOT NULL,
   `qr_code` varchar(50) NOT NULL,
-  `full_name` varchar(100) NOT NULL,
+  `full_name` varchar(100) DEFAULT 'Local Resident',
   `total_points` decimal(10,2) DEFAULT 0.00,
-  `total_bottles` int(11) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -137,9 +96,9 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `qr_code`, `full_name`, `total_points`, `total_bottles`, `created_at`) VALUES
-(1, 'RC-2026-00142', 'Juan Dela Cruz', 5.50, 74, '2026-05-10 17:34:13'),
-(2, 'RC-2026-00139', 'Maria Clara', 120.00, 60, '2026-05-10 17:34:13');
+INSERT INTO `users` (`id`, `ip_address`, `qr_code`, `full_name`, `total_points`, `created_at`) VALUES
+(1, '::1', 'RC-2026-324992', 'Resident (::1)', 102.00, '2026-05-11 17:47:22'),
+(2, '10.167.202.29', 'RC-2026-0F33A9', 'Resident (10.167.202.29)', 0.00, '2026-05-11 17:48:05');
 
 --
 -- Indexes for dumped tables
@@ -156,8 +115,7 @@ ALTER TABLE `deposits`
 -- Indexes for table `personnel`
 --
 ALTER TABLE `personnel`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `username` (`username`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `redemptions`
@@ -172,6 +130,7 @@ ALTER TABLE `redemptions`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `ip_address` (`ip_address`),
   ADD UNIQUE KEY `qr_code` (`qr_code`);
 
 --
@@ -182,7 +141,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `deposits`
 --
 ALTER TABLE `deposits`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `personnel`
@@ -194,7 +153,7 @@ ALTER TABLE `personnel`
 -- AUTO_INCREMENT for table `redemptions`
 --
 ALTER TABLE `redemptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -210,14 +169,14 @@ ALTER TABLE `users`
 -- Constraints for table `deposits`
 --
 ALTER TABLE `deposits`
-  ADD CONSTRAINT `deposits_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `deposits_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `redemptions`
 --
 ALTER TABLE `redemptions`
-  ADD CONSTRAINT `redemptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `redemptions_ibfk_2` FOREIGN KEY (`personnel_id`) REFERENCES `personnel` (`id`);
+  ADD CONSTRAINT `redemptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `redemptions_ibfk_2` FOREIGN KEY (`personnel_id`) REFERENCES `personnel` (`id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
