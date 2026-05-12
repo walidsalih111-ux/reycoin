@@ -4,14 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>RECYCOIN - Resident</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
+<!-- <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"> -->
+<!-- <script src="https://cdn.tailwindcss.com"></script> -->
+ <link href="functions/font.css" rel="stylesheet">
+ <!-- <script src="functions/font.css"></script> -->
+ <script src="functions/tailwind.js"></script>
 
 <!-- Favicon / Logo for browser tab -->
 <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
 <link rel="shortcut icon" href="assets/logo.png">
 <link rel="apple-touch-icon" href="assets/logo.png">
-
 <style>
     :root {
         --green-900: #042c1e; --green-800: #0a5c46; --green-700: #0F6E56; --green-400: #5DCAA5;
