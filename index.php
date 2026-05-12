@@ -6,8 +6,6 @@
 <title>RECYCOIN - Resident</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script> -->
-<script src=functions\qrcode.min.js></script>
 
 <!-- Favicon / Logo for browser tab -->
 <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
@@ -74,21 +72,21 @@
     <!-- MAIN CONTENT -->
     <div class="px-5 -mt-6 relative z-10">
         
-        <!-- QR CODE CARD -->
+        <!-- RESIDENT ID CARD -->
         <div class="card text-center relative overflow-hidden border border-gray-100">
             <div class="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-bl-full -z-10"></div>
             <h3 class="font-bold text-gray-800 mb-1">My Resident ID</h3>
-            <p class="text-xs text-gray-500 mb-4">Scan this to barangay personnel to redeem your 100 points and claim your incentives at the Barangay Tetuan.</p>
+            <p class="text-xs text-gray-500 mb-5">Provide this unique ID to the barangay personnel to redeem your 100 points and claim your incentives.</p>
             
-            <div class="bg-white p-3 rounded-xl inline-block border-2 border-gray-100 shadow-sm mb-2">
-                <div id="qrcode"></div>
+            <div class="bg-green-50/50 p-4 rounded-xl border-2 border-[var(--green-700)] shadow-inner mb-3 flex items-center justify-center relative">
+                <!-- Click to copy overlay can be added here if desired -->
+                <p class="font-mono text-xl font-bold text-[var(--green-900)] tracking-widest break-all" id="resident-id-text">Loading...</p>
             </div>
-            <p class="font-mono text-sm font-medium text-gray-600 tracking-wider mt-1" id="qr-text">Loading...</p>
+            <p class="font-mono text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-1">Barangay Tetuan</p>
         </div>
 
         <!-- ACTION BUTTON -->
         <button onclick="openDepositModal()" class="w-full bg-[var(--green-700)] text-white font-bold py-4 rounded-xl shadow-lg shadow-green-900/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 mb-6">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             Insert Bottle
         </button>
 
@@ -155,12 +153,6 @@
                 </div>
             </div>
 
-            <div class="bg-black w-full h-56 rounded-xl mb-3 overflow-hidden relative shadow-inner">
-                <video id="webcam-feed" autoplay playsinline class="w-full h-full object-cover"></video>
-                <div class="absolute inset-0 border-4 border-dashed border-white/20 pointer-events-none rounded-xl m-2"></div>
-                <div id="scan-line" class="absolute top-0 left-0 w-full h-1 bg-green-400 shadow-[0_0_10px_#5DCAA5] pointer-events-none opacity-50" style="animation: scan 2s linear infinite;"></div>
-            </div>
-
             <p class="text-xs text-gray-500 text-center mb-4 bg-gray-50 p-2 rounded-lg border border-gray-100">
                 <strong class="text-gray-700">Rules:</strong> 1 min to insert bottle. Timer resets on valid PET detection. <br>
                 <span class="text-[var(--green-700)] font-medium">Small = 1pt | Medium = 2pts | Large = 3pts</span>
@@ -192,10 +184,6 @@
 
 </div>
 
-<style>
-    @keyframes scan { 0% { top: 0; } 50% { top: 100%; } 100% { top: 0; } }
-</style>
-
 <script>
     // --- STATE ---
     let myAssignedQR = null; 
@@ -204,7 +192,6 @@
     let timeLeft = 60;
     let sessionPoints = 0;
     let sessionBottles = 0;
-    let stream = null;
 
     function showToast(msg) {
         const t = document.getElementById('toast');
@@ -226,16 +213,13 @@
                 currentName = json.data.full_name;
                 document.getElementById('user-name').innerText = currentName;
                 document.getElementById('total-points').innerText = parseFloat(json.data.total_points).toFixed(2);
-                generateQRCode(myAssignedQR);
+                
+                // Set the text identifier directly instead of generating QR
+                document.getElementById('resident-id-text').innerText = myAssignedQR;
+                
                 fetchHistory(); // Fetch initial history
             }
         } catch(e) { document.getElementById('user-name').innerText = "Connection Error"; }
-    }
-
-    function generateQRCode(text) {
-        document.getElementById("qrcode").innerHTML = "";
-        new QRCode(document.getElementById("qrcode"), { text: text, width: 140, height: 140, colorDark : "#1a1a1a", colorLight : "#ffffff" });
-        document.getElementById('qr-text').innerText = text;
     }
 
     // --- POLLING & SYNC ---
@@ -359,13 +343,12 @@
     async function openDepositModal() {
         if(!myAssignedQR) { showToast("Establishing secure connection first..."); return; }
         openModal('deposit-modal');
-        sessionPoints = 0; sessionBottles = 0; updateSessionUI(); startTimer(); startWebcam();
+        sessionPoints = 0; sessionBottles = 0; updateSessionUI(); startTimer(); 
     }
 
     function closeDepositModal() {
         closeModal('deposit-modal');
         clearInterval(timerInterval);
-        stopWebcam();
     }
 
     function updateSessionUI() {
@@ -389,15 +372,6 @@
         let m = Math.floor(timeLeft / 60); let s = timeLeft % 60;
         document.getElementById('timer-display').innerText = `0${m}:${s < 10 ? '0' : ''}${s}`;
     }
-
-    async function startWebcam() {
-        try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            document.getElementById('webcam-feed').srcObject = stream;
-        } catch (err) { console.error("Webcam error:", err); }
-    }
-
-    function stopWebcam() { if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; } }
 
     function triggerDetection(isPet, sizeLabel, pointsValue) {
         if (isPet) {

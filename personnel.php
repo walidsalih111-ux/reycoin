@@ -15,19 +15,17 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 <title>RECYCOIN - Personnel Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
 
 <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
 <link rel="shortcut icon" href="assets/logo.png">
 <link rel="apple-touch-icon" href="assets/logo.png">
 <style>
-    :root { --g900: #042c1e; --g700: #1a7f4c; /* Adjusted to match reference image */ --a500: #BA7517; }
+    :root { --g900: #042c1e; --g700: #1a7f4c; --a500: #BA7517; }
     body { font-family: 'DM Sans', sans-serif; background-color: #042c1e; color: #fff; margin: 0; }
     .app-container { max-width: 480px; margin: 0 auto; background: var(--g900); min-height: 100vh; display: flex; flex-direction: column; }
     .card { background: white; color: #1a1a1a; border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 16px; }
     .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; opacity: 0; transition: 0.3s; z-index: 100; white-space: nowrap;}
     .toast.show { opacity: 1; }
-    #reader video { border-radius: 12px; object-fit: cover; }
     
     /* Scrollbar styling for history modal */
     ::-webkit-scrollbar { width: 6px; }
@@ -64,30 +62,12 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         </div>
     </div>
 
-    <!-- Step 1: Scan -->
+    <!-- Step 1: ID Entry -->
     <div id="step-scan" class="card">
-        <h2 class="font-bold text-lg mb-2 text-gray-900">Scan Resident ID</h2>
-        <p class="text-sm text-gray-500 mb-4">Use the camera to scan the Resident's QR code.</p>
-        
-        <!-- Scanner Window -->
-        <div id="reader" width="100%" class="mb-4 hidden rounded-xl overflow-hidden border-2 border-green-200 bg-gray-50"></div>
+        <h2 class="font-bold text-lg mb-2 text-gray-900">Enter Resident ID</h2>
+        <p class="text-sm text-gray-500 mb-6">Type the Resident's unique ID code to process their redemption request.</p>
 
-        <button id="start-scan-btn" onclick="startScanner()" class="w-full bg-green-50 text-green-800 font-bold py-4 rounded-xl mb-2 border border-green-200 hover:bg-green-100 transition flex justify-center items-center gap-2 shadow-sm">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            Open Camera Scanner
-        </button>
-
-        <button id="stop-scan-btn" onclick="stopScanner()" class="w-full bg-red-50 text-red-600 font-bold py-4 rounded-xl mb-2 hidden transition shadow-sm">
-            Close Camera
-        </button>
-
-        <div class="flex items-center my-5">
-            <div class="flex-grow border-t border-gray-100"></div>
-            <span class="mx-4 text-gray-400 text-xs tracking-wider">OR ENTER MANUALLY</span>
-            <div class="flex-grow border-t border-gray-100"></div>
-        </div>
-
-        <input type="text" id="qr-input" placeholder="e.g. RC-2026-00142" class="w-full border border-gray-200 p-4 rounded-xl font-mono mb-4 text-center tracking-widest outline-none focus:border-[var(--g700)] focus:ring-2 focus:ring-green-100 transition-all text-gray-800">
+        <input type="text" id="qr-input" placeholder="e.g. RC-2026-XXXXXX" class="w-full border border-gray-200 p-4 rounded-xl font-mono mb-4 text-center tracking-widest outline-none focus:border-[var(--g700)] focus:ring-2 focus:ring-green-100 transition-all text-gray-800 uppercase text-lg">
         
         <button onclick="verifyQR()" class="w-full bg-[var(--g700)] text-white font-bold py-4 rounded-xl hover:bg-green-800 transition shadow-md">
             Verify Resident
@@ -180,7 +160,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 
 <script>
     let currentResident = null;
-    let html5QrcodeScanner = null;
     let historyPollingInterval = null;
 
     function showToast(msg) {
@@ -307,59 +286,14 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         }).join('');
     }
 
-    // --- IMPROVED CAMERA SCANNER LOGIC --- //
-    function startScanner() {
-        if (window.isSecureContext === false) {
-            showToast("Camera blocked! Access via localhost or HTTPS to use camera.");
-            return;
-        }
-
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showToast("Camera API not supported or blocked by browser permissions.");
-            return;
-        }
-
-        document.getElementById('reader').classList.remove('hidden');
-        document.getElementById('start-scan-btn').classList.add('hidden');
-        document.getElementById('stop-scan-btn').classList.remove('hidden');
-
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        const onSuccess = (decodedText) => {
-            document.getElementById('qr-input').value = decodedText;
-            showToast("QR Code Detected!");
-            stopScanner();
-            verifyQR(); 
-        };
-
-        html5QrcodeScanner.start({ facingMode: "environment" }, config, onSuccess, () => {})
-        .catch((err) => {
-            html5QrcodeScanner.start({ facingMode: "user" }, config, onSuccess, () => {})
-            .catch((err2) => {
-                showToast("Camera access denied. Please grant permissions.");
-                stopScanner();
-            });
-        });
-    }
-
-    function stopScanner() {
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.stop().then(() => {
-                document.getElementById('reader').classList.add('hidden');
-                document.getElementById('start-scan-btn').classList.remove('hidden');
-                document.getElementById('stop-scan-btn').classList.add('hidden');
-                html5QrcodeScanner.clear();
-            }).catch((err) => { console.error("Failed to stop scanner", err); });
-        }
-    }
-
     // --- VERIFICATION & REDEMPTION LOGIC --- //
     async function verifyQR() {
         const qr = document.getElementById('qr-input').value.trim();
-        if(!qr) return showToast('Please enter or scan a QR code');
+        if(!qr) return showToast('Please enter a Resident ID code');
 
         try {
+            // Keep the 'qr' parameter mapping as the API logic expects it, 
+            // even though we are sending it manually via input text now.
             let res = await fetch(`api.php?action=get_user&qr=${qr}`);
             let json = await res.json();
             
@@ -416,9 +350,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     }
 
     function resetScan() {
-        // Ensure camera shuts off gracefully if it was left on
-        try { stopScanner(); } catch(e) {}
-        
         // Reset the form input and memory
         document.getElementById('qr-input').value = '';
         currentResident = null;
