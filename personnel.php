@@ -13,8 +13,11 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>RECYCOIN - Personnel Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
+<!-- <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"> -->
+<!-- <script src="https://cdn.tailwindcss.com"></script> -->
+
+<script src="functions/font.js"></script>
+<script src="functions/tailwind.js"></script>
 
 <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
 <link rel="shortcut icon" href="assets/logo.png">
