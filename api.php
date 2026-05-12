@@ -1,5 +1,6 @@
 <?php
 // api.php - The bridge between the Web Apps and the Database
+session_start(); // START SESSION AT THE VERY TOP
 header('Content-Type: application/json');
 require 'config.php';
 
@@ -73,7 +74,9 @@ elseif ($action === 'redeem') {
     $cost = 100.00; // Fixed 100 points
     $item = "100 Points Reward";
     
-    $personnelId = 1; // Hardcoded for prototype
+    // In a real scenario, personnel_id would come from $_SESSION['personnel_id']
+    $personnelId = $_SESSION['personnel_id'] ?? 1; 
+    
     $stmt = $pdo->prepare("SELECT * FROM users WHERE qr_code = ?");
     $stmt->execute([$qr]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -123,10 +126,21 @@ elseif ($action === 'login') {
     $personnel = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($personnel) {
+        // SECURE THE SESSION HERE
+        $_SESSION['personnel_logged_in'] = true;
+        $_SESSION['personnel_id'] = $personnel['id'];
+        
         echo json_encode(['status' => 'success']);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Invalid username or password']);
     }
+}
+
+// NEW: 5.5 Logout Personnel
+elseif ($action === 'logout') {
+    session_unset();
+    session_destroy();
+    echo json_encode(['status' => 'success']);
 }
 
 // 6. Get User History Logs (Individual)
@@ -159,7 +173,7 @@ elseif ($action === 'get_history') {
 // 7. Update Admin Credentials
 elseif ($action === 'update_admin') {
     $data = json_decode(file_get_contents('php://input'), true);
-    $id = $data['id'] ?? 1; // Assuming default admin is ID 1
+    $id = $_SESSION['personnel_id'] ?? 1; // Securely get ID from session if available
     $username = $data['username'] ?? '';
     $password = $data['password'] ?? '';
     

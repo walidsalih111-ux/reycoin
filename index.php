@@ -6,7 +6,8 @@
 <title>RECYCOIN - Resident</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script> -->
+<script src=functions\qrcode.min.js></script>
 
 <!-- Favicon / Logo for browser tab -->
 <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
