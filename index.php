@@ -4,10 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>RECYCOIN - Resident</title>
-<!-- <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"> -->
-<!-- <script src="https://cdn.tailwindcss.com"></script> -->
  <link href="functions/font.css" rel="stylesheet">
- <!-- <script src="functions/font.css"></script> -->
  <script src="functions/tailwind.js"></script>
 
 <!-- Favicon / Logo for browser tab -->
@@ -81,10 +78,8 @@
             <p class="text-xs text-gray-500 mb-5">Provide this unique ID to the barangay personnel to redeem your 100 points and claim your incentives.</p>
             
             <div class="bg-green-50/50 p-4 rounded-xl border-2 border-[var(--green-700)] shadow-inner mb-3 flex items-center justify-center relative">
-                <!-- Click to copy overlay can be added here if desired -->
                 <p class="font-mono text-xl font-bold text-[var(--green-900)] tracking-widest break-all" id="resident-id-text">Loading...</p>
             </div>
-            <!-- <p class="font-mono text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-1">Barangay Tetuan</p> -->
         </div>
 
         <!-- ACTION BUTTON -->
@@ -169,7 +164,7 @@
             </div>
 
             <div class="flex gap-3">
-                
+                <!-- <button onclick="closeDepositModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold shadow-md">Exit</button> -->
                 <button onclick="confirmBalance()" class="flex-[2] py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md">Confirm Balance</button>
             </div>
 
@@ -216,18 +211,14 @@
                 document.getElementById('user-name').innerText = currentName;
                 document.getElementById('total-points').innerText = parseFloat(json.data.total_points).toFixed(2);
                 
-                // Set the text identifier directly instead of generating QR
                 document.getElementById('resident-id-text').innerText = myAssignedQR;
                 
-                fetchHistory(); // Fetch initial history
+                fetchHistory(); 
 
-                // NEW FEATURE: Pop up Edit Name modal for first-time users or un-configured default names
                 let isDefaultName = currentName.startsWith('Resident (');
                 if (json.data.is_new || (isDefaultName && !sessionStorage.getItem('name_prompted'))) {
-                    sessionStorage.setItem('name_prompted', 'true'); // Prevents looping if they close without saving
-                    setTimeout(() => {
-                        openEditNameModal();
-                    }, 500); // Small 500ms delay to let the UI finish rendering first
+                    sessionStorage.setItem('name_prompted', 'true');
+                    setTimeout(() => { openEditNameModal(); }, 500); 
                 }
             }
         } catch(e) { document.getElementById('user-name').innerText = "Connection Error"; }
@@ -241,7 +232,6 @@
             let json = await res.json();
             if(json.status === 'success') {
                 document.getElementById('total-points').innerText = parseFloat(json.data.total_points).toFixed(2);
-                // If history modal is open, refresh it in real-time
                 if(!document.getElementById('history-modal').classList.contains('hidden')) fetchHistory();
             }
         } catch(e) {}
@@ -249,7 +239,6 @@
 
     // --- NAME EDITING ---
     function openEditNameModal() {
-        // Clear the input if it's still the default IP placeholder, else load their custom name
         if (currentName.startsWith('Resident (')) {
             document.getElementById('new-name-input').value = '';
         } else {
@@ -355,9 +344,24 @@
         }).join('');
     }
 
-    // --- RVM MODAL LOGIC (Untouched core logic) ---
+    // --- RVM MODAL & LOCK LOGIC ---
     async function openDepositModal() {
         if(!myAssignedQR) { showToast("Establishing secure connection first..."); return; }
+        
+        // Check Lock Status before opening
+        try {
+            let res = await fetch(`api.php?action=request_lock&qr=${myAssignedQR}`);
+            let json = await res.json();
+            if(json.status !== 'success') {
+                // If it fails, show a toast warning and return early
+                showToast("⚠️ Machine is currently in use by another resident. Please wait.");
+                return; 
+            }
+        } catch(e) {
+            showToast("Network error checking machine status.");
+            return;
+        }
+
         openModal('deposit-modal');
         sessionPoints = 0; sessionBottles = 0; updateSessionUI(); startTimer(); 
     }
@@ -365,6 +369,11 @@
     function closeDepositModal() {
         closeModal('deposit-modal');
         clearInterval(timerInterval);
+        
+        // Release Lock when modal closes
+        if(myAssignedQR) {
+            fetch(`api.php?action=release_lock&qr=${myAssignedQR}`);
+        }
     }
 
     function updateSessionUI() {
@@ -394,6 +403,9 @@
             sessionPoints += pointsValue; sessionBottles++;
             updateSessionUI(); startTimer(); 
             showToast(`✅ Valid PET (${sizeLabel})! +${pointsValue} pts.`);
+            
+            // Extend the machine lock timer for another full cycle
+            fetch(`api.php?action=extend_lock&qr=${myAssignedQR}`);
         } else { showToast('❌ Invalid bottle detected.'); }
     }
 
@@ -407,7 +419,8 @@
             let json = await res.json();
             if (json.status === 'success') {
                 showToast(`Success! ${sessionPoints} points added to balance.`);
-                refreshData(); closeDepositModal();
+                refreshData(); 
+                closeDepositModal(); // Will release the lock
             } else { showToast('Error saving data.'); }
         } catch(e) { showToast('Network error during checkout.'); }
     }
