@@ -6,9 +6,9 @@ RECYCOIN
 
 Roadmap.
 
-When the resident is first time using and connect to the Rcycoin wifi, pop up the Edit Resident Name modal
+When the resident is first time using and connect to the Rcycoin wifi, pop up the Edit Resident Name modal (done)
 
-When the resident insert bottle, only one resident can only insert bottle not at the same time just like PISOWIFI to avoid confliction, give the warning when someone is inserting the bottle.
+When the resident insert bottle, only one resident can only insert bottle not at the same time just like PISOWIFI to avoid confliction, give the warning when someone is inserting the bottle. (done)
 
 1. Display QR Code when no one is connected to the RECYCOIN network, allowing users to easily connect by scanning the code with their mobile devices.
 
