@@ -2,8 +2,8 @@
 // config.php - Handles the database connection
 $host = 'localhost';
 $db   = 'recycoin_db';
-$user = 'root'; // Default XAMPP username
-$pass = '';     // Default XAMPP password
+$user = 'recycoin_user'; // Updated to the new MariaDB   user
+$pass = 'recycoin_pass'; // Updated to the new MariaDB password
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
