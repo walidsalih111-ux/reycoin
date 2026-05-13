@@ -1,53 +1,88 @@
 import cv2
-from ultralytics import YOLO
+import math
+from ultralytics import YOLO, YOLOWorld
 
-# 1. Initialize the Webcam
-cap = cv2.VideoCapture(0)
+# ==========================================
+# 1. INITIALIZE MODELS
+# ==========================================
 
-# Optional: Set resolution
+# Standard YOLOv8 for general bottle detection (COCO class 39)
+# Assuming standard bottle detection implies PET bottles for your RVM
+model_std = YOLO('yolov8n.pt')
+BOTTLE_CLASS_ID = 39 
+
+# YOLO-World for specific non-PET bottle detection
+model_world = YOLOWorld('yolov8s-world.pt')
+# Set custom classes for YOLO-World to identify items to reject
+# model_world.set_classes(["non-pet bottle", "glass bottle", "aluminum can"])
+model_world.set_classes(["non-pet bottle"])
+
+# ==========================================
+# 2. SETUP VIDEO STREAM
+# ==========================================
+cap = cv2.VideoCapture(0) # Use 0 for webcams, or replace with video path
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480  )
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-# 2. Load YOLOv8 model
-model = YOLO("yolov8n.pt")
+print("Starting Recycoin Bottle Detection...")
 
 while True:
-    # Capture frame-by-frame
-    ret, frame = cap.read()
-    
-    if not ret:
-        print("Error: Failed to grab frame.")
+    success, frame = cap.read()
+    if not success:
+        print("Failed to grab frame or video ended.")
         break
 
-    # 3. Run YOLO inference
-    # ADDED: classes=[39] to only detect bottles
-    results = model(frame, stream=True, classes=[39])
+    # ==========================================
+    # 3. STANDARD BOTTLE DETECTION (PET)
+    # ==========================================
+    results_std = model_std(frame, stream=True, verbose=False)
     
-    for result in results:
-        # Plot detection boxes on the frame
-        annotated_frame = result.plot()
-        
-        # 4. Calculate FPS
-        inference_time = result.speed['inference']
-        if inference_time > 0:
-            fps = 1000 / inference_time
-            text = f'FPS: {fps:.1f}'
+    for r in results_std:
+        boxes = r.boxes
+        for box in boxes:
+            cls = int(box.cls[0])
             
-            # Setup text positioning
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            text_size = cv2.getTextSize(text, font, 1, 2)[0]
-            text_x = annotated_frame.shape[1] - text_size[0] - 10
-            text_y = text_size[1] + 10
+            # Filter only for 'bottle' class in standard YOLO
+            if cls == BOTTLE_CLASS_ID:
+                x1, y1, x2, y2 = box.xyxy[0]
+                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+                conf = math.ceil((box.conf[0] * 100)) / 100
 
-            cv2.putText(annotated_frame, text, (text_x, text_y), font, 1, (0, 255, 0), 2, cv2.LINE_AA)
+                # Draw Green Box for standard Bottle (Assumed PET)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, f'Bottle (PET) {conf}', (max(0, x1), max(20, y1 - 10)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-        # Display the frame
-        cv2.imshow("Bottle Detection", annotated_frame)
+    # ==========================================
+    # 4. YOLO-WORLD DETECTION (NON-PET)
+    # ==========================================
+    # We use a slightly higher confidence threshold to avoid false positives 
+    results_world = model_world(frame, stream=True, verbose=False, conf=0.15)
+    
+    for r in results_world:
+        boxes = r.boxes
+        for box in boxes:
+            x1, y1, x2, y2 = box.xyxy[0]
+            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+            conf = math.ceil((box.conf[0] * 100)) / 100
+            cls_name = model_world.names[int(box.cls[0])]
 
-    # Exit on 'q' key
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+            # Draw Red Box for Non-PET or rejectable items
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+            cv2.putText(frame, f'REJECT: {cls_name} {conf}', (max(0, x1), max(20, y1 + 20)), # Offset text to avoid overlap
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+    # FPS text has been removed as requested
+
+    # ==========================================
+    # 5. DISPLAY OUTPUT
+    # ==========================================
+    cv2.imshow("Recycoin - Bottle Verification Stream", frame)
+
+    # Press 'q' to quit the program
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# 5. Cleanup
+# Cleanup
 cap.release()
 cv2.destroyAllWindows()
