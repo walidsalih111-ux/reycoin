@@ -109,7 +109,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     </div>
 
     <!-- EDIT CREDENTIALS MODAL -->
-    <div id="edit-credentials-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div id="edit-credentials-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-2xl p-6 relative shadow-2xl text-gray-800">
             <h2 class="text-xl font-bold text-[var(--g900)] mb-2">Edit Credentials</h2>
             <p class="text-sm text-gray-500 mb-4">Update your admin username and password.</p>
@@ -135,7 +135,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     </div>  
 
     <!-- GLOBAL HISTORY LOG MODAL -->
-    <div id="admin-history-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex flex-col items-center justify-end p-0">
+    <div id="admin-history-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex-col items-center justify-end p-0">
         <div class="bg-white w-full max-w-md h-[80vh] rounded-t-3xl p-6 flex flex-col relative shadow-[0_-10px_40px_rgba(0,0,0,0.1)] text-gray-800">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-[var(--g900)]">Transaction History</h2>

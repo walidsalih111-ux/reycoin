@@ -84,7 +84,7 @@
                 <!-- Click to copy overlay can be added here if desired -->
                 <p class="font-mono text-xl font-bold text-[var(--green-900)] tracking-widest break-all" id="resident-id-text">Loading...</p>
             </div>
-            <p class="font-mono text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-1">Barangay Tetuan</p>
+            <!-- <p class="font-mono text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-1">Barangay Tetuan</p> -->
         </div>
 
         <!-- ACTION BUTTON -->
@@ -98,7 +98,7 @@
 
     <!-- Modals -->
     <!-- EDIT NAME MODAL -->
-    <div id="edit-name-modal" class="fixed inset-0 modal-overlay hidden z-50 flex items-center justify-center p-4">
+    <div id="edit-name-modal" class="fixed inset-0 modal-overlay hidden z-50 items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-2xl p-6 relative shadow-2xl">
             <h2 class="text-xl font-bold text-[var(--green-900)] mb-2">Edit Resident Name</h2>
             <p class="text-sm text-gray-500 mb-4">Update your display name here.</p>
@@ -111,7 +111,7 @@
     </div>
 
     <!-- PERSONNEL LOGIN MODAL -->
-    <div id="login-modal" class="fixed inset-0 modal-overlay hidden z-50 flex items-center justify-center p-4">
+    <div id="login-modal" class="fixed inset-0 modal-overlay hidden z-50 items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-2xl p-6 relative shadow-2xl">
             <div class="flex justify-center mb-2">
                 <div class="bg-orange-100 p-3 rounded-full text-orange-600">
@@ -129,7 +129,7 @@
     </div>
 
     <!-- HISTORY LOG MODAL -->
-    <div id="history-modal" class="fixed inset-0 modal-overlay hidden z-50 flex flex-col items-center justify-end p-0">
+    <div id="history-modal" class="fixed inset-0 modal-overlay hidden z-50 flex-col items-center justify-end p-0">
         <div class="bg-white w-full max-w-md h-[70vh] rounded-t-3xl p-6 flex flex-col relative shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-[var(--green-900)]">Transaction History</h2>
@@ -145,7 +145,7 @@
     </div>
 
     <!-- RVM DEPOSIT MODAL -->
-    <div id="deposit-modal" class="fixed inset-0 modal-overlay hidden z-50 flex flex-col items-center justify-center p-4">
+    <div id="deposit-modal" class="fixed inset-0 modal-overlay hidden z-50 flex-col items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl p-6 relative shadow-2xl">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold text-[var(--green-900)]">RVM Disposal</h2>
@@ -169,7 +169,7 @@
             </div>
 
             <div class="flex gap-3">
-                <button onclick="closeDepositModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold">Cancel</button>
+                
                 <button onclick="confirmBalance()" class="flex-[2] py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md">Confirm Balance</button>
             </div>
 
@@ -220,6 +220,15 @@
                 document.getElementById('resident-id-text').innerText = myAssignedQR;
                 
                 fetchHistory(); // Fetch initial history
+
+                // NEW FEATURE: Pop up Edit Name modal for first-time users or un-configured default names
+                let isDefaultName = currentName.startsWith('Resident (');
+                if (json.data.is_new || (isDefaultName && !sessionStorage.getItem('name_prompted'))) {
+                    sessionStorage.setItem('name_prompted', 'true'); // Prevents looping if they close without saving
+                    setTimeout(() => {
+                        openEditNameModal();
+                    }, 500); // Small 500ms delay to let the UI finish rendering first
+                }
             }
         } catch(e) { document.getElementById('user-name').innerText = "Connection Error"; }
     }
@@ -240,7 +249,12 @@
 
     // --- NAME EDITING ---
     function openEditNameModal() {
-        document.getElementById('new-name-input').value = currentName;
+        // Clear the input if it's still the default IP placeholder, else load their custom name
+        if (currentName.startsWith('Resident (')) {
+            document.getElementById('new-name-input').value = '';
+        } else {
+            document.getElementById('new-name-input').value = currentName;
+        }
         openModal('edit-name-modal');
     }
 

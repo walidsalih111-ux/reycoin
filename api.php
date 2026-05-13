@@ -23,6 +23,9 @@ if ($action === 'init_session') {
         
         $stmt->execute([$ip]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $user['is_new'] = true; // FLAG AS FIRST TIME USER
+    } else {
+        $user['is_new'] = false; // EXISTING USER
     }
     
     echo json_encode(['status' => 'success', 'data' => $user]);
