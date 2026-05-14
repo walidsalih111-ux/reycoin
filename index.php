@@ -51,6 +51,38 @@
         <button onclick="openDepositModal()" class="w-full bg-[var(--green-700)] text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-transform">
             Insert Bottle
         </button>
+
+        <!-- RULES MOVED HERE -->
+        <div class="mt-4 mb-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <div class="overflow-hidden rounded-lg border border-gray-100">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
+                        <tr>
+                            <th class="px-4 py-2 text-center">Bottle Size</th>
+                            <th class="px-4 py-2 text-center">Points Earned</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-gray-700 font-medium">
+                        <tr>
+                            <td class="px-4 py-2 text-center">250ml</td>
+                            <td class="px-4 py-2 text-center text-[var(--green-700)]">+0.5 pt</td>
+                        </tr>
+                        <tr class="bg-gray-50/50">
+                            <td class="px-4 py-2 text-center">500ml</td>
+                            <td class="px-4 py-2 text-center text-[var(--green-700)]">+1.0 pt</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 text-center">1L</td>
+                            <td class="px-4 py-2 text-center text-[var(--green-700)]">+2.0 pts</td>
+                        </tr>
+                        <tr class="bg-gray-50/50">
+                            <td class="px-4 py-2 text-center">1.5L</td>
+                            <td class="px-4 py-2 text-center text-[var(--green-700)]">+3.0 pts</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <div id="toast"></div>
@@ -70,11 +102,6 @@
                 <p class="text-white text-xs z-10 animate-pulse">Initializing Camera Feed...</p>
                 <img id="rvm-cam" src="" class="absolute inset-0 w-full h-full object-cover z-20 hidden" alt="RVM Camera">
             </div>
-
-            <p class="text-xs text-gray-500 text-center mb-4 bg-gray-50 p-2 rounded-lg border border-gray-100">
-                <strong class="text-gray-700">Rules:</strong> Insert bottle. Timer resets on valid PET detection. <br>
-                <span class="text-[var(--green-700)] font-medium">250ml: 0.5pt | 500ml: 1pt | 1L: 2pts | 1.5L: 3pts</span>
-            </p>
 
             <div class="bg-[var(--green-50)] p-4 rounded-xl mb-5 flex justify-between items-center border border-[var(--green-200)]">
                 <div>
