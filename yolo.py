@@ -1,122 +1,130 @@
 import cv2
 import time
-# import requests # Uncomment this if you plan to send data to your api.php
+import threading
+from flask import Flask, Response, jsonify
+from flask_cors import CORS
 from ultralytics import YOLO
 
 # ==========================================
-# 1. INITIALIZE MODEL & CONFIGURATION
+# 1. INITIALIZE FLASK & YOLO MODEL
 # ==========================================
-# Load the standard YOLOv8 nano model (or your custom trained model)
-model = YOLO('yolov8n.pt') 
+app = Flask(__name__)
+CORS(app) # Allow frontend to interact directly if needed
 
-# COCO Class ID for 'bottle' is 39
+model = YOLO('yolov8n.pt') 
 BOTTLE_CLASS_ID = 39 
 
 # ==========================================
-# 2. CALIBRATION THRESHOLDS (PIXELS)
+# 2. STATE & CONFIGURATION
 # ==========================================
-# IMPORTANT: You MUST calibrate these pixel values based on your actual 
-# RVM camera setup. Insert a 500ml, 1L, and 1.5L bottle and check the 
-# terminal output for their 'Longest Side (px)' to adjust these numbers.
+is_camera_active = False
+cap = None
+detected_queue = []
+last_detection_time = 0
+COOLDOWN_SECONDS = 3.0  # Prevent scanning the same bottle multiple times per second
 
-# Example pixel thresholds for the longest side of the bounding box:
-THRESHOLD_250ML_MAX = 180   # If length <= 180px, it's 250ml
-THRESHOLD_500ML_MAX = 250   # If length > 180px and <= 250px, it's 500ml
-THRESHOLD_1000ML_MAX = 380  # If length > 250px and <= 380px, it's 1L
-# Anything greater than 380px will be considered 1.5L
+THRESHOLD_250ML_MAX = 180   
+THRESHOLD_500ML_MAX = 250   
+THRESHOLD_1000ML_MAX = 380  
 
-def estimate_size(width, height):
-    """
-    Estimates the bottle volume based on the bounding box size in pixels.
-    We use the longest side (max of width or height) to account for 
-    bottles being inserted upright or sideways.
-    """
+def estimate_size_and_points(width, height):
+    """Returns size label and corresponding points"""
     longest_side = max(width, height)
     
     if longest_side <= THRESHOLD_250ML_MAX:
-        return "250ml"
+        return "250ml", 0.5
     elif longest_side <= THRESHOLD_500ML_MAX:
-        return "500ml"
+        return "500ml", 1.0
     elif longest_side <= THRESHOLD_1000ML_MAX:
-        return "1000ml (1L)"
+        return "1L", 2.0
     else:
-        return "1.5L"
+        return "1.5L", 3.0
 
 # ==========================================
-# 3. MAIN VIDEO LOOP
+# 3. VIDEO STREAM GENERATOR
 # ==========================================
-def main():
-    # Initialize video capture (0 for default webcam, or adjust to your camera index)
-    cap = cv2.VideoCapture(0)
+def generate_frames():
+    global cap, is_camera_active, detected_queue, last_detection_time
     
-    if not cap.isOpened():
-        print("Error: Could not open camera.")
-        return
-
-    print("Starting RECYCOIN Bottle Detection. Press 'q' to quit.")
-
     while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("Failed to grab frame.")
-            break
+        if not is_camera_active:
+            time.sleep(0.5)
+            continue
+            
+        if cap is None or not cap.isOpened():
+            cap = cv2.VideoCapture(0) # Open camera
+            
+        success, frame = cap.read()
+        if not success:
+            time.sleep(0.1)
+            continue
 
-        # Run YOLO inference only looking for bottles (classes=[39])
+        # Run YOLO inference
         results = model(frame, classes=[BOTTLE_CLASS_ID], verbose=False)
 
         for result in results:
-            boxes = result.boxes
-            
-            for box in boxes:
-                # Extract coordinates and dimensions
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                w, h = float(box.xywh[0][2]), float(box.xywh[0][3])
+            for box in result.boxes:
                 conf = float(box.conf[0])
-
-                # Only process if confidence is above a certain threshold (e.g., 60%)
-                if conf > 0.60:
-                    # Determine the size based on bounding box
-                    size_category = estimate_size(w, h)
-                    longest_side = max(w, h)
+                if conf > 0.60: # 60% confidence threshold
+                    w, h = float(box.xywh[0][2]), float(box.xywh[0][3])
+                    size_cat, points = estimate_size_and_points(w, h)
                     
-                    # Print to terminal for calibration purposes
-                    # print(f"Detected: {size_category} | Longest Side: {longest_side:.1f}px | Confidence: {conf:.2f}")
-
                     # Draw Bounding Box
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     
-                    # Draw Label with Size
-                    label = f"PET {size_category} ({conf:.2f})"
-                    
-                    # Background for text for better readability
-                    (text_w, text_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-                    cv2.rectangle(frame, (x1, y1 - 25), (x1 + text_w, y1), (0, 255, 0), -1)
-                    cv2.putText(frame, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+                    # Draw Label
+                    label = f"PET {size_cat} (+{points}pts)"
+                    cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-                    # ---------------------------------------------------------
-                    # OPTIONAL: Send data to your PHP Backend (api.php)
-                    # ---------------------------------------------------------
-                    # payload = {
-                    #     "bottle_size": size_category,
-                    #     "confidence": conf,
-                    #     "points": 5 if size_category == "500ml" else 10 # Example point logic
-                    # }
-                    # try:
-                    #     requests.post("http://localhost/reycoin/api.php", data=payload)
-                    #     time.sleep(2) # Prevent spamming the API for the same bottle
-                    # except Exception as e:
-                    #     print(f"API Error: {e}")
+                    # Accumulate logic (with cooldown)
+                    current_time = time.time()
+                    if (current_time - last_detection_time) > COOLDOWN_SECONDS:
+                        detected_queue.append({"size": size_cat, "points": points})
+                        last_detection_time = current_time
 
-        # Show the video feed
-        cv2.imshow("RECYCOIN - PET Bottle Detection", frame)
+        # Encode frame to JPEG and yield to web stream
+        ret, buffer = cv2.imencode('.jpg', frame)
+        if ret:
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
-        # Break loop on 'q' key press
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+# ==========================================
+# 4. FLASK API ENDPOINTS
+# ==========================================
+@app.route('/video_feed')
+def video_feed():
+    """Live MJPEG Stream Endpoint"""
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-    # Cleanup
-    cap.release()
-    cv2.destroyAllWindows()
+@app.route('/start')
+def start_camera():
+    """Triggered by PHP when modal opens"""
+    global is_camera_active
+    is_camera_active = True
+    return jsonify({"status": "started"})
 
-if __name__ == "__main__":
-    main()
+@app.route('/stop')
+def stop_camera():
+    """Triggered by PHP when modal closes to save CPU"""
+    global is_camera_active, cap
+    is_camera_active = False
+    if cap is not None:
+        cap.release()
+        cap = None
+    return jsonify({"status": "stopped"})
+
+@app.route('/poll')
+def poll_detection():
+    """Polled by PHP to check if a bottle was successfully detected"""
+    global detected_queue
+    if len(detected_queue) > 0:
+        data = detected_queue.pop(0) # Remove from queue and return
+        return jsonify({"status": "success", "size": data["size"], "points": data["points"]})
+    return jsonify({"status": "empty"})
+
+if __name__ == '__main__':
+    # Run server locally on port 5000. 
+    # Important: Run this file continuously in the background using `python yolo.py &`
+    app.run(host='0.0.0.0', port=5000, threaded=True)
