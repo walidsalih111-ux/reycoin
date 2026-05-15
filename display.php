@@ -167,7 +167,8 @@ if (isset($_GET['ajax'])) {
     // Data Polling Logic
     async function pollStatus() {
         try {
-            let res = await fetch('lcddisplay.php?ajax=1');
+            // FIX: Changed 'lcddisplay.php' to 'display.php' so it hits the internal PHP block
+            let res = await fetch('display.php?ajax=1');
             let json = await res.json();
             
             if (json.status === 'success' && json.user) {
