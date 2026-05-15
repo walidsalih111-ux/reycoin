@@ -48,7 +48,6 @@
             </div>
             <div class="text-right">
                 <div class="flex justify-end mb-1">
-                    <!-- Personnel Login Button Added Here -->
                     <button onclick="openLoginModal()" class="text-xs bg-white/10 hover:bg-white/20 text-white py-1.5 px-3 rounded-full transition flex items-center gap-1.5 font-medium shadow-sm">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                         Personnel
@@ -150,10 +149,13 @@
                 </div>
             </div>
 
-            <!-- LIVE WEBCAM STREAM CONTAINER -->
-            <div id="cam-container" class="relative w-full h-48 bg-black rounded-xl mb-4 overflow-hidden border border-[var(--green-200)] flex items-center justify-center">
-                <p class="text-white text-xs z-10 animate-pulse">Initializing Camera Feed...</p>
-                <img id="rvm-cam" src="" class="absolute inset-0 w-full h-full object-cover z-20 hidden" alt="RVM Camera">
+            <!-- HARDWARE SCANNER ACTIVE INDICATOR -->
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center mb-5 flex flex-col items-center justify-center h-48">
+                <svg class="animate-pulse w-14 h-14 text-[var(--green-700)] mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                <p class="text-[var(--green-900)] font-bold text-lg mb-1">Scanner Active</p>
+                <p class="text-sm text-gray-500 max-w-[200px]">Please look at the machine's display and insert your bottles.</p>
             </div>
 
             <div class="bg-[var(--green-50)] p-4 rounded-xl mb-5 flex justify-between items-center border border-[var(--green-200)]">
@@ -164,7 +166,7 @@
                 <span class="text-3xl font-black text-[var(--green-700)]" id="session-total-pts">0.00</span>
             </div>
 
-            <button onclick="confirmBalance()" class="w-full py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md">Confirm Balance</button>
+            <button onclick="confirmBalance()" class="w-full py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md hover:bg-green-800 transition">Confirm Balance</button>
         </div>
     </div>
 </div>
@@ -195,7 +197,6 @@
                 document.getElementById('total-points').innerText = parseFloat(json.data.total_points).toFixed(2);
                 document.getElementById('resident-id-text').innerText = myAssignedQR;
 
-                // Auto-trigger name modal if it's a first time user OR if the name is still the IP default
                 if (json.data.is_new || json.data.full_name.startsWith('Resident (')) {
                     openEditNameModal(true);
                 }
@@ -258,7 +259,7 @@
             document.getElementById('cancel-name-btn').classList.add('hidden');
             document.getElementById('name-modal-title').innerText = "Welcome to RECYCOIN!";
             document.getElementById('name-modal-desc').innerText = "Please enter your full name to start earning points.";
-            inputField.value = ""; // Clear default IP name
+            inputField.value = ""; 
         } else {
             document.getElementById('cancel-name-btn').classList.remove('hidden');
             document.getElementById('name-modal-title').innerText = "Edit Profile";
@@ -280,7 +281,6 @@
         const errorMsg = document.getElementById('name-error');
         const name = inputField.value.trim();
 
-        // Validation Rules
         const nameRegex = /^[A-Za-z0-9 .\-]+$/;
         if (name.length < 3) {
             errorMsg.innerText = "Name must be at least 3 characters long.";
@@ -293,7 +293,7 @@
             return;
         }
         
-        errorMsg.classList.add('hidden'); // Validation Passed
+        errorMsg.classList.add('hidden');
 
         try {
             let res = await fetch('api.php?action=update_name', {
@@ -306,7 +306,7 @@
             if (json.status === 'success') {
                 showToast('✅ Profile name updated successfully!');
                 document.getElementById('user-name').innerText = json.new_name;
-                isForceName = false; // Allow standard closing behavior
+                isForceName = false; 
                 closeEditNameModal();
             } else {
                 errorMsg.innerText = json.message || "Failed to update name.";
@@ -329,12 +329,9 @@
         document.getElementById('deposit-modal').classList.remove('hidden');
         sessionPoints = 0; sessionBottles = 0; updateSessionUI(); startTimer(); 
 
+        // Start YOLO (Camera feed will pop up natively on the Pi)
         await fetch('api.php?action=yolo_start');
         
-        const camImg = document.getElementById('rvm-cam');
-        camImg.src = `http://${window.location.hostname}:5000/video_feed`;
-        camImg.classList.remove('hidden');
-
         yoloPollInterval = setInterval(pollYoloDetection, 1000);
     }
 
@@ -353,9 +350,8 @@
         clearInterval(timerInterval);
         clearInterval(yoloPollInterval);
         
+        // Stop YOLO (Will close the native window on the Pi)
         fetch('api.php?action=yolo_stop');
-        document.getElementById('rvm-cam').src = '';
-        document.getElementById('rvm-cam').classList.add('hidden');
 
         if(myAssignedQR) { fetch(`api.php?action=release_lock&qr=${myAssignedQR}`); }
     }

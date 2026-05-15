@@ -1,7 +1,7 @@
 import cv2
 import time
 import threading
-from flask import Flask, Response, jsonify
+from flask import Flask, jsonify
 from flask_cors import CORS
 from ultralytics import YOLO
 
@@ -9,7 +9,7 @@ from ultralytics import YOLO
 # 1. INITIALIZE FLASK & YOLO MODEL
 # ==========================================
 app = Flask(__name__)
-CORS(app) # Allow frontend to interact directly if needed
+CORS(app)
 
 model = YOLO('yolov8n.pt') 
 BOTTLE_CLASS_ID = 39 
@@ -18,7 +18,6 @@ BOTTLE_CLASS_ID = 39
 # 2. STATE & CONFIGURATION
 # ==========================================
 is_camera_active = False
-cap = None
 detected_queue = []
 last_detection_time = 0
 COOLDOWN_SECONDS = 3.0  # Prevent scanning the same bottle multiple times per second
@@ -41,18 +40,72 @@ def estimate_size_and_points(width, height):
         return "1.5L", 3.0
 
 # ==========================================
-# 3. VIDEO STREAM GENERATOR
+# 3. FLASK API ENDPOINTS
 # ==========================================
-def generate_frames():
-    global cap, is_camera_active, detected_queue, last_detection_time
-    
+@app.route('/start')
+def start_camera():
+    """Triggered by PHP when modal opens"""
+    global is_camera_active
+    is_camera_active = True
+    return jsonify({"status": "started"})
+
+@app.route('/stop')
+def stop_camera():
+    """Triggered by PHP when modal closes to save CPU & hide GUI"""
+    global is_camera_active
+    is_camera_active = False
+    return jsonify({"status": "stopped"})
+
+@app.route('/poll')
+def poll_detection():
+    """Polled by PHP to check if a bottle was successfully detected"""
+    global detected_queue
+    if len(detected_queue) > 0:
+        data = detected_queue.pop(0) # Remove from queue and return
+        return jsonify({"status": "success", "size": data["size"], "points": data["points"]})
+    return jsonify({"status": "empty"})
+
+# ==========================================
+# 4. OPENCV NATIVE GUI LOOP (Main Thread)
+# ==========================================
+def main_gui_loop():
+    global is_camera_active, detected_queue, last_detection_time
+    cap = None
+    window_name = "PET Bottle Scanner"
+
+    print("PET Bottle Scanner ready. Waiting for start command...")
+
     while True:
         if not is_camera_active:
-            time.sleep(0.5)
+            # If camera shouldn't be active, release resources and close window
+            if cap is not None:
+                cap.release()
+                cap = None
+                cv2.destroyAllWindows()
+            time.sleep(0.2)
             continue
+
+        # If camera should be active but isn't opened yet
+        if cap is None:
+            cap = cv2.VideoCapture(0)
             
-        if cap is None or not cap.isOpened():
-            cap = cv2.VideoCapture(0) # Open camera
+            # --- RASPBERRY PI 5 PERFORMANCE OPTIMIZATIONS ---
+            # 1. Set Video stream explicitly to 480p
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            
+            # 2. Limit buffer size to 1 to drop old frames and avoid UI lag
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            
+            # 3. Setup window
+            cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+            
+            # Switch to Fullscreen and bring to Foreground initially
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            try:
+                cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+            except Exception:
+                pass # Failsafe for older OpenCV versions/unsupported Wayland managers
             
         success, frame = cap.read()
         if not success:
@@ -60,12 +113,17 @@ def generate_frames():
             continue
 
         # Run YOLO inference
-        results = model(frame, classes=[BOTTLE_CLASS_ID], verbose=False)
+        # imgsz=320 is applied here: Massively speeds up CPU inference on Pi 5 while maintaining close-up accuracy
+        results = model(frame, classes=[BOTTLE_CLASS_ID], verbose=False, imgsz=320)
+        
+        bottle_detected = False
 
         for result in results:
             for box in result.boxes:
                 conf = float(box.conf[0])
                 if conf > 0.60: # 60% confidence threshold
+                    bottle_detected = True
+                    
                     w, h = float(box.xywh[0][2]), float(box.xywh[0][3])
                     size_cat, points = estimate_size_and_points(w, h)
                     
@@ -83,48 +141,32 @@ def generate_frames():
                         detected_queue.append({"size": size_cat, "points": points})
                         last_detection_time = current_time
 
-        # Encode frame to JPEG and yield to web stream
-        ret, buffer = cv2.imencode('.jpg', frame)
-        if ret:
-            frame_bytes = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+        # If a bottle is actively detected, aggressively re-assert Fullscreen and Foreground
+        # Ensures that if the Debian OS minimized the window, the user sees it immediately
+        if bottle_detected:
+            cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+            try:
+                cv2.setWindowProperty(window_name, cv2.WND_PROP_TOPMOST, 1)
+            except Exception:
+                pass
 
-# ==========================================
-# 4. FLASK API ENDPOINTS
-# ==========================================
-@app.route('/video_feed')
-def video_feed():
-    """Live MJPEG Stream Endpoint"""
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+        # Display the frame via native GUI on the Pi
+        cv2.imshow(window_name, frame)
 
-@app.route('/start')
-def start_camera():
-    """Triggered by PHP when modal opens"""
-    global is_camera_active
-    is_camera_active = True
-    return jsonify({"status": "started"})
+        # waitKey is required for OpenCV to refresh GUI events
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
-@app.route('/stop')
-def stop_camera():
-    """Triggered by PHP when modal closes to save CPU"""
-    global is_camera_active, cap
-    is_camera_active = False
-    if cap is not None:
+    if cap:
         cap.release()
-        cap = None
-    return jsonify({"status": "stopped"})
-
-@app.route('/poll')
-def poll_detection():
-    """Polled by PHP to check if a bottle was successfully detected"""
-    global detected_queue
-    if len(detected_queue) > 0:
-        data = detected_queue.pop(0) # Remove from queue and return
-        return jsonify({"status": "success", "size": data["size"], "points": data["points"]})
-    return jsonify({"status": "empty"})
+    cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    # Run server locally on port 5000. 
-    # Important: Run this file continuously in the background using `python yolo.py &`
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    # 1. Run Flask in a daemon thread so it runs in the background
+    # This allows it to listen to HTTP requests without blocking the OpenCV GUI loop
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False))
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # 2. Run the OpenCV loop on the main thread (required by most OS window managers)
+    main_gui_loop()
