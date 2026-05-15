@@ -3,8 +3,8 @@ import time
 import threading
 import numpy as np
 from flask import Flask, jsonify
-from flask_cors import CORS
-from ultralytics import YOLO
+from flask_cors import CORS # type: ignore
+from ultralytics import YOLO # type: ignore
 
 # ==========================================
 # 1. INITIALIZE FLASK & YOLO MODEL
