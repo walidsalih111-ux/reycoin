@@ -1,6 +1,7 @@
 import cv2
 import time
 import threading
+import numpy as np
 from flask import Flask, jsonify
 from flask_cors import CORS
 from ultralytics import YOLO
@@ -38,6 +39,48 @@ def estimate_size_and_points(width, height):
         return "1L", 2.0
     else:
         return "1.5L", 3.0
+
+def is_bottle_upright(roi):
+    """
+    Heuristic to determine if a detected PET bottle is upright.
+    Compares the horizontal span of edges in the top quarter vs bottom quarter.
+    Upright bottles have a narrow neck (top) and wide base (bottom).
+    """
+    h, w = roi.shape[:2]
+    
+    # If the bounding box is too small, default to valid to avoid math errors
+    if h < 40 or w < 20:
+        return True 
+
+    # Convert to grayscale and detect edges
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+
+    # Analyze the top 25% and bottom 25% of the cropped bottle image
+    quarter_h = h // 4
+    top_region = edges[0:quarter_h, :]
+    bottom_region = edges[h - quarter_h:h, :]
+
+    def get_average_width(region):
+        widths = []
+        # For every row of pixels, find the distance between the leftmost and rightmost edge
+        for row in region:
+            pts = np.where(row > 0)[0]
+            if len(pts) >= 2:
+                widths.append(pts[-1] - pts[0])
+        return float(np.mean(widths)) if widths else 0.0
+
+    top_width = get_average_width(top_region)
+    bottom_width = get_average_width(bottom_region)
+
+    # If the bottom is completely missing but the top has width, it's upside down
+    if top_width > 0 and bottom_width == 0:
+        return False
+        
+    # An upright bottle should have a base wider than (or roughly equal to) the neck.
+    # We use a 0.85 multiplier to allow for slight angles, camera distortion, or labels.
+    return bottom_width >= (top_width * 0.85)
+
 
 # ==========================================
 # 3. FLASK API ENDPOINTS
@@ -122,13 +165,32 @@ def main_gui_loop():
             for box in result.boxes:
                 conf = float(box.conf[0])
                 if conf > 0.60: # 60% confidence threshold
-                    bottle_detected = True
+                    
+                    bottle_detected = True # Keeps the UI awake
                     
                     w, h = float(box.xywh[0][2]), float(box.xywh[0][3])
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    
+                    # 1. Reject Sideways Bottles (width is greater than height)
+                    if w > h:
+                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 165, 255), 2) # Orange Box
+                        cv2.putText(frame, "REJECTED (Sideways)", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
+                        continue
+                    
+                    # Safely extract the Region of Interest (ROI) avoiding out-of-bounds indices
+                    h_frame, w_frame = frame.shape[:2]
+                    x1_safe, y1_safe = max(0, x1), max(0, y1)
+                    x2_safe, y2_safe = min(w_frame, x2), min(h_frame, y2)
+                    roi = frame[y1_safe:y2_safe, x1_safe:x2_safe]
+                    
+                    # 2. Reject Upside Down Bottles using OpenCV Edge analysis
+                    if not is_bottle_upright(roi):
+                        continue
+                    
+                    # --- If we pass the checks, process the bottle! ---
                     size_cat, points = estimate_size_and_points(w, h)
                     
-                    # Draw Bounding Box
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    # Draw Green Bounding Box
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     
                     # Draw Label
