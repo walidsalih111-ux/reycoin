@@ -11,6 +11,9 @@ try {
         expires_at INT DEFAULT 0
     )");
     $pdo->exec("INSERT IGNORE INTO system_lock (id, user_qr, expires_at) VALUES (1, NULL, 0)");
+    
+    // Add updated_at to store latest update timestamps (silently ignores if already exists)
+    $pdo->exec("ALTER TABLE users ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
 } catch (\PDOException $e) {}
 
 $action = $_GET['action'] ?? '';
@@ -59,6 +62,29 @@ elseif ($action === 'deposit') {
         echo json_encode(['status' => 'success']);
     } else { echo json_encode(['status' => 'error']); }
 }
+// ==========================================
+// NEW: RESIDENT PROFILE UPDATE
+// ==========================================
+elseif ($action === 'update_name') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $qr = $data['qr'] ?? '';
+    $name = trim($data['new_name'] ?? '');
+
+    // Backend validation: Min 3 chars, allows A-Z, a-z, 0-9, spaces, periods, and hyphens.
+    if (strlen($name) < 3 || !preg_match('/^[A-Za-z0-9 .\-]+$/', $name)) {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid name format. Only letters, numbers, spaces, periods, and hyphens allowed.']);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("UPDATE users SET full_name = ? WHERE qr_code = ?");
+    $success = $stmt->execute([$name, $qr]);
+
+    if ($success) {
+        echo json_encode(['status' => 'success', 'new_name' => $name]);
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Database update failed.']);
+    }
+}
 elseif ($action === 'request_lock') {
     $qr = $_GET['qr'] ?? '';
     $now = time();
@@ -89,7 +115,7 @@ elseif ($action === 'release_lock') {
 }
 
 // ==========================================
-// NEW: YOLO HARDWARE BRIDGES (PHP to Python)
+// YOLO HARDWARE BRIDGES (PHP to Python)
 // ==========================================
 // We use a small timeout to prevent PHP from freezing if Python is off.
 elseif ($action === 'yolo_start') {
@@ -110,5 +136,24 @@ elseif ($action === 'yolo_poll') {
 // ------------------------------------------
 
 // Re-include remaining untouched api.php routes here (redeem, get_history, etc) 
-// (Truncated to save space, keep your existing logic for other endpoints below)
+// Mocked redeem for completeness in this file context:
+elseif ($action === 'redeem') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $qr = $data['qr'] ?? '';
+    $stmt = $pdo->prepare("SELECT id, total_points FROM users WHERE qr_code = ?");
+    $stmt->execute([$qr]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($user && $user['total_points'] >= 100) {
+        $update = $pdo->prepare("UPDATE users SET total_points = total_points - 100 WHERE id = ?");
+        $update->execute([$user['id']]);
+        
+        $insert = $pdo->prepare("INSERT INTO redemptions (user_id, reward_item, points_deducted) VALUES (?, 'Standard Redemption', 100)");
+        $insert->execute([$user['id']]);
+        
+        echo json_encode(['status' => 'success']);
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Insufficient points or user not found.']);
+    }
+}
 ?>

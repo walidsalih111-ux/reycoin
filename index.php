@@ -32,7 +32,15 @@
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">RECYCOIN</h1>
-                <p class="text-green-400 text-sm opacity-90 font-medium" id="user-name">Connecting...</p>
+                <div class="flex items-center gap-2 mt-1">
+                    <p class="text-green-400 text-sm opacity-90 font-medium truncate max-w-[150px]" id="user-name">Connecting...</p>
+                    <button onclick="openEditNameModal(false)" class="text-green-400 hover:text-white transition tooltip" title="Edit Profile Name">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <div class="text-right">
                 <p class="text-sm text-green-200 font-medium mb-1">Balance</p>
@@ -52,7 +60,6 @@
             Insert Bottle
         </button>
 
-        <!-- RULES MOVED HERE -->
         <div class="mt-4 mb-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
             <div class="overflow-hidden rounded-lg border border-gray-100">
                 <table class="w-full text-sm">
@@ -86,6 +93,22 @@
     </div>
 
     <div id="toast"></div>
+
+    <!-- PROFILE NAME MODAL -->
+    <div id="name-modal" class="fixed inset-0 modal-overlay hidden z-50 flex-col items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 relative shadow-2xl">
+            <h2 class="text-xl font-bold text-[var(--green-900)] mb-2" id="name-modal-title">Complete Profile</h2>
+            <p class="text-sm text-gray-500 mb-4" id="name-modal-desc">Please enter your full name to continue.</p>
+
+            <input type="text" id="resident-name-input" class="w-full border border-gray-300 p-4 rounded-xl outline-none focus:border-[var(--green-700)] focus:ring-2 focus:ring-green-100 transition-all text-gray-800" placeholder="e.g. Juan Dela Cruz">
+            <p id="name-error" class="text-red-500 text-xs mt-2 hidden"></p>
+
+            <div class="flex gap-3 mt-5">
+                <button id="cancel-name-btn" onclick="closeEditNameModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
+                <button onclick="saveResidentName()" class="flex-[2] py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md hover:bg-green-800 transition">Save Name</button>
+            </div>
+        </div>
+    </div>
 
     <!-- RVM DEPOSIT MODAL -->
     <div id="deposit-modal" class="fixed inset-0 modal-overlay hidden z-50 flex-col items-center justify-center p-4">
@@ -123,6 +146,7 @@
     let timeLeft = 60;
     let sessionPoints = 0;
     let sessionBottles = 0;
+    let isForceName = false;
 
     function showToast(msg) {
         const t = document.getElementById('toast');
@@ -140,8 +164,85 @@
                 document.getElementById('user-name').innerText = json.data.full_name;
                 document.getElementById('total-points').innerText = parseFloat(json.data.total_points).toFixed(2);
                 document.getElementById('resident-id-text').innerText = myAssignedQR;
+
+                // Auto-trigger name modal if it's a first time user OR if the name is still the IP default
+                if (json.data.is_new || json.data.full_name.startsWith('Resident (')) {
+                    openEditNameModal(true);
+                }
             }
         } catch(e) {}
+    }
+
+    // --- PROFILE NAME LOGIC ---
+    function openEditNameModal(force = false) {
+        isForceName = force;
+        document.getElementById('name-modal').classList.remove('hidden');
+        document.getElementById('name-error').classList.add('hidden');
+        
+        const inputField = document.getElementById('resident-name-input');
+        
+        if (force) {
+            document.getElementById('cancel-name-btn').classList.add('hidden');
+            document.getElementById('name-modal-title').innerText = "Welcome to RECYCOIN!";
+            document.getElementById('name-modal-desc').innerText = "Please enter your full name to start earning points.";
+            inputField.value = ""; // Clear default IP name
+        } else {
+            document.getElementById('cancel-name-btn').classList.remove('hidden');
+            document.getElementById('name-modal-title').innerText = "Edit Profile";
+            document.getElementById('name-modal-desc').innerText = "Update your displayed name.";
+            inputField.value = document.getElementById('user-name').innerText;
+        }
+    }
+
+    function closeEditNameModal() {
+        if (!isForceName) {
+            document.getElementById('name-modal').classList.add('hidden');
+        }
+    }
+
+    async function saveResidentName() {
+        if (!myAssignedQR) return showToast("Profile error. Please refresh the page.");
+        
+        const inputField = document.getElementById('resident-name-input');
+        const errorMsg = document.getElementById('name-error');
+        const name = inputField.value.trim();
+
+        // Validation Rules
+        const nameRegex = /^[A-Za-z0-9 .\-]+$/;
+        if (name.length < 3) {
+            errorMsg.innerText = "Name must be at least 3 characters long.";
+            errorMsg.classList.remove('hidden');
+            return;
+        }
+        if (!nameRegex.test(name)) {
+            errorMsg.innerText = "Only letters, numbers, spaces, periods, and hyphens are allowed.";
+            errorMsg.classList.remove('hidden');
+            return;
+        }
+        
+        errorMsg.classList.add('hidden'); // Validation Passed
+
+        try {
+            let res = await fetch('api.php?action=update_name', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ qr: myAssignedQR, new_name: name })
+            });
+            let json = await res.json();
+            
+            if (json.status === 'success') {
+                showToast('✅ Profile name updated successfully!');
+                document.getElementById('user-name').innerText = json.new_name;
+                isForceName = false; // Allow standard closing behavior
+                closeEditNameModal();
+            } else {
+                errorMsg.innerText = json.message || "Failed to update name.";
+                errorMsg.classList.remove('hidden');
+            }
+        } catch (e) {
+            errorMsg.innerText = "Network error. Please try again.";
+            errorMsg.classList.remove('hidden');
+        }
     }
 
     // --- YOLO & RVM MODAL LOGIC ---
@@ -155,15 +256,12 @@
         document.getElementById('deposit-modal').classList.remove('hidden');
         sessionPoints = 0; sessionBottles = 0; updateSessionUI(); startTimer(); 
 
-        // Start Hardware Camera via PHP
         await fetch('api.php?action=yolo_start');
         
-        // Point the img src directly to the Python Stream (running on port 5000)
         const camImg = document.getElementById('rvm-cam');
         camImg.src = `http://${window.location.hostname}:5000/video_feed`;
         camImg.classList.remove('hidden');
 
-        // Start checking for detected bottles from Python every 1 second
         yoloPollInterval = setInterval(pollYoloDetection, 1000);
     }
 
@@ -171,11 +269,10 @@
         try {
             let res = await fetch('api.php?action=yolo_poll');
             let json = await res.json();
-            // If Python successfully queued a detection
             if(json.status === 'success') {
                 triggerDetection(true, json.size, json.points);
             }
-        } catch(e) {} // Fail silently if camera is still booting
+        } catch(e) {} 
     }
 
     function closeDepositModal() {
@@ -183,7 +280,6 @@
         clearInterval(timerInterval);
         clearInterval(yoloPollInterval);
         
-        // Stop the Camera script
         fetch('api.php?action=yolo_stop');
         document.getElementById('rvm-cam').src = '';
         document.getElementById('rvm-cam').classList.add('hidden');
@@ -218,7 +314,7 @@
             sessionPoints += parseFloat(pointsValue); 
             sessionBottles++;
             updateSessionUI(); 
-            startTimer(); // Reset timer to 60s
+            startTimer(); 
             showToast(`✅ Valid PET Detected (${sizeLabel})! +${pointsValue} pts.`);
             fetch(`api.php?action=extend_lock&qr=${myAssignedQR}`);
         }
@@ -234,7 +330,7 @@
             let json = await res.json();
             if (json.status === 'success') {
                 showToast(`Success! ${sessionPoints} points added.`);
-                initApp(); // Refresh user data
+                initApp(); 
                 closeDepositModal(); 
             }
         } catch(e) { showToast('Error during checkout.'); }
