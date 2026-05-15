@@ -1,5 +1,5 @@
 <?php
-// lcddisplay.php - Real-time Desktop / Kiosk Display for RecyCoin
+
 require 'config.php';
 
 // --- AJAX POLLING BACKEND ---
@@ -9,29 +9,24 @@ if (isset($_GET['ajax'])) {
     $active_user = null;
     $now = time();
 
-    // 1. Prioritize the user currently holding the machine lock (actively inserting bottles)
     $lock_stmt = $pdo->query("SELECT user_qr FROM system_lock WHERE id = 1 AND expires_at > $now");
     $lock = $lock_stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($lock && $lock['user_qr']) {
-        $usr_stmt = $pdo->prepare("SELECT * FROM users WHERE qr_code = ?");
+        // Exclude localhost users even if they somehow acquired a lock
+        $usr_stmt = $pdo->prepare("SELECT * FROM users WHERE qr_code = ? AND ip_address NOT IN ('127.0.0.1', '::1')");
         $usr_stmt->execute([$lock['user_qr']]);
         $active_user = $usr_stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // 2. If no active lock, find the first connected user via Hotspot Ping
     if (!$active_user) {
-        $stmt = $pdo->query("SELECT * FROM users ORDER BY GREATEST(IFNULL(updated_at, '2000-01-01'), created_at) DESC LIMIT 10");
+        // Exclude localhost IP addresses from the fetch
+        $stmt = $pdo->query("SELECT * FROM users WHERE ip_address NOT IN ('127.0.0.1', '::1') ORDER BY GREATEST(IFNULL(updated_at, '2000-01-01'), created_at) DESC LIMIT 10");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         foreach ($users as $u) {
             $ip = $u['ip_address'];
-            
-            // Localhost is always considered "connected" (for testing)
-            if ($ip === '::1' || $ip === '127.0.0.1') {
-                $active_user = $u;
-                break;
-            }
             
             // Safe ping execution
             if (function_exists('exec')) {
@@ -53,9 +48,9 @@ if (isset($_GET['ajax'])) {
         }
     }
 
-    // 3. Last resort fallback: Show the latest user if they interacted within the last 60 seconds
+    // 3. Last resort fallback: Show the latest user if they interacted within the last 60 seconds (excluding localhost)
     if (!$active_user) {
-        $fallback_stmt = $pdo->query("SELECT * FROM users WHERE updated_at >= NOW() - INTERVAL 1 MINUTE ORDER BY updated_at DESC LIMIT 1");
+        $fallback_stmt = $pdo->query("SELECT * FROM users WHERE ip_address NOT IN ('127.0.0.1', '::1') AND updated_at >= NOW() - INTERVAL 1 MINUTE ORDER BY updated_at DESC LIMIT 1");
         $active_user = $fallback_stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -72,9 +67,10 @@ if (isset($_GET['ajax'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RecyCoin - LCD Kiosk Display</title>
+    <title>RECYCOIN - Display</title>
     <script src="functions/tailwind.js"></script>
     <link href="functions/font.css" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
     <style>
         :root {
             --g900: #042c1e; --g800: #0a5c46; --g700: #0F6E56; --g400: #5DCAA5;
@@ -95,15 +91,10 @@ if (isset($_GET['ajax'])) {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: scale(0.95);
+            display: none; /* Changed from opacity: 0 to display: none for instant switching */
         }
         .screen.active {
-            opacity: 1;
-            pointer-events: auto;
-            transform: scale(1);
+            display: flex; /* Snap to visible */
         }
         .points-display {
             font-size: 8rem;
@@ -127,26 +118,18 @@ if (isset($_GET['ajax'])) {
 </head>
 <body>
 
-<div class="top-bar">
-    <div class="flex items-center gap-3">
-        <!-- Logo fallback ensures it loads if the path changes slightly -->
-        <img src="assets/logo.png" onerror="this.src='logo.png'" alt="Logo" class="w-12 h-12 bg-white rounded-full p-1 drop-shadow-sm object-contain">
-        <h2 class="text-2xl font-bold tracking-widest text-green-100">RECYCOIN</h2>
-    </div>
-</div>
-
 <!-- IDLE SCREEN (No User Connected) -->
 <div id="idle-screen" class="screen active text-center">
     <h1 class="text-6xl font-black mb-4">Welcome to RECYCOIN</h1>
     <p class="text-3xl text-green-200 mb-12">Scan to connect to our hotspot and start recycling.</p>
     
-    <div class="bg-white p-8 rounded-[40px] shadow-[0_0_80px_rgba(93,202,165,0.15)] inline-block transform transition-transform hover:scale-105 duration-500">
-        <!-- Using the requested qr.png asset -->
-        <img src="assets/qr.png" onerror="this.src='qr.png'" alt="Wi-Fi QR Code" class="w-80 h-80 mx-auto">
+    <div class="bg-white p-8 rounded-[40px] shadow-[0_0_80px_rgba(93,202,165,0.15)] inline-block">
+        <!-- Using the requested wifiqr.jpg asset -->
+        <img src="assets/wifiqr.jpg" onerror="this.src='wifiqr.jpg'" alt="Wi-Fi QR Code" class="w-80 h-80 mx-auto">
     </div>
     
     <div class="mt-12 bg-black/20 backdrop-blur-sm px-8 py-4 rounded-full border border-white/10 shadow-inner">
-        <p class="text-2xl text-green-400 font-mono tracking-widest font-bold">WIFI: <span class="text-white">RECYCOIN_HOTSPOT</span></p>
+        <p class="text-2xl text-green-400 font-mono tracking-widest font-bold">WIFI: <span class="text-white">RECYCOIN</span></p>
     </div>
 </div>
 
@@ -155,10 +138,7 @@ if (isset($_GET['ajax'])) {
     <div class="flex items-center gap-8 mb-12 w-full">
         <div class="flex-1 min-w-0">
             <p class="text-2xl text-green-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-3">
-                <span class="relative flex h-4 w-4">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
-                </span>
+                <span class="inline-block rounded-full h-4 w-4 bg-green-500"></span>
                 Connected Resident
             </p>
             <h1 class="text-6xl font-black text-white truncate max-w-4xl" id="display-name">---</h1>
@@ -198,14 +178,14 @@ if (isset($_GET['ajax'])) {
                 document.getElementById('display-points').innerText = parseFloat(u.total_points).toFixed(2);
                 document.getElementById('display-qr').innerText = u.qr_code;
                 
-                // Crossfade to user screen if not already visible
+                // Snap to user screen if not already visible
                 if (currentUserId !== u.id) {
                     document.getElementById('idle-screen').classList.remove('active');
                     document.getElementById('user-screen').classList.add('active');
                     currentUserId = u.id;
                 }
             } else {
-                // No user found, fade back to QR Code screen
+                // No user found, snap back to QR Code screen
                 if (currentUserId !== null) {
                     document.getElementById('user-screen').classList.remove('active');
                     document.getElementById('idle-screen').classList.add('active');
