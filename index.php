@@ -6,6 +6,7 @@
 <title>RECYCOIN - Resident</title>
 <link href="functions/font.css" rel="stylesheet">
 <script src="functions/tailwind.js"></script>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
 <style>
     :root {
         --green-900: #042c1e; --green-800: #0a5c46; --green-700: #0F6E56; --green-400: #5DCAA5;
@@ -29,9 +30,12 @@
 
 <div class="app-container">
     <div class="header-curved">
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex justify-between items-start mb-6">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">RECYCOIN</h1>
+                <div class="flex items-center gap-2">
+                    <img src="assets/logo.png" alt="Logo" class="w-8 h-8 rounded-full bg-white p-0.5 shadow-sm object-contain">
+                    <h1 class="text-2xl font-bold tracking-tight">RECYCOIN</h1>
+                </div>
                 <div class="flex items-center gap-2 mt-1">
                     <p class="text-green-400 text-sm opacity-90 font-medium truncate max-w-[150px]" id="user-name">Connecting...</p>
                     <button onclick="openEditNameModal(false)" class="text-green-400 hover:text-white transition tooltip" title="Edit Profile Name">
@@ -43,7 +47,14 @@
                 </div>
             </div>
             <div class="text-right">
-                <p class="text-sm text-green-200 font-medium mb-1">Balance</p>
+                <div class="flex justify-end mb-1">
+                    <!-- Personnel Login Button Added Here -->
+                    <button onclick="openLoginModal()" class="text-xs bg-white/10 hover:bg-white/20 text-white py-1.5 px-3 rounded-full transition flex items-center gap-1.5 font-medium shadow-sm">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        Personnel
+                    </button>
+                </div>
+                <p class="text-sm text-green-200 font-medium mb-1 mt-1">Balance</p>
                 <h2 class="text-4xl font-black tracking-tighter" id="total-points">0.00</h2>
             </div>
         </div>
@@ -93,6 +104,25 @@
     </div>
 
     <div id="toast"></div>
+
+    <!-- PERSONNEL LOGIN MODAL -->
+    <div id="login-modal" class="fixed inset-0 modal-overlay hidden z-50 flex-col items-center justify-center p-4">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 relative shadow-2xl">
+            <h2 class="text-xl font-bold text-[var(--green-900)] mb-2">Personnel Login</h2>
+            <p class="text-sm text-gray-500 mb-5">Enter credentials to access the admin panel.</p>
+
+            <input type="text" id="admin-user-input" class="w-full border border-gray-300 p-4 rounded-xl outline-none focus:border-[var(--green-700)] focus:ring-2 focus:ring-green-100 transition-all text-gray-800 mb-3" placeholder="Username">
+            
+            <input type="password" id="admin-pass-input" class="w-full border border-gray-300 p-4 rounded-xl outline-none focus:border-[var(--green-700)] focus:ring-2 focus:ring-green-100 transition-all text-gray-800 mb-1" placeholder="Password">
+            
+            <p id="login-error-msg" class="text-red-500 text-xs mt-1 mb-3 hidden"></p>
+
+            <div class="flex gap-3 mt-4">
+                <button onclick="closeLoginModal()" class="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
+                <button onclick="submitAdminLogin()" class="flex-[2] py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md hover:bg-green-800 transition">Login</button>
+            </div>
+        </div>
+    </div>
 
     <!-- PROFILE NAME MODAL -->
     <div id="name-modal" class="fixed inset-0 modal-overlay hidden z-50 flex-col items-center justify-center p-4">
@@ -171,6 +201,49 @@
                 }
             }
         } catch(e) {}
+    }
+
+    // --- PERSONNEL LOGIN LOGIC ---
+    function openLoginModal() {
+        document.getElementById('login-modal').classList.remove('hidden');
+        document.getElementById('login-error-msg').classList.add('hidden');
+        document.getElementById('admin-user-input').value = '';
+        document.getElementById('admin-pass-input').value = '';
+    }
+
+    function closeLoginModal() {
+        document.getElementById('login-modal').classList.add('hidden');
+    }
+
+    async function submitAdminLogin() {
+        const user = document.getElementById('admin-user-input').value.trim();
+        const pass = document.getElementById('admin-pass-input').value;
+        const errorMsg = document.getElementById('login-error-msg');
+
+        if (!user || !pass) {
+            errorMsg.innerText = "Please enter both username and password.";
+            errorMsg.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            let res = await fetch('api.php?action=personnel_login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
+            let json = await res.json();
+
+            if (json.status === 'success') {
+                window.location.href = 'personnel.php';
+            } else {
+                errorMsg.innerText = json.message || "Invalid credentials.";
+                errorMsg.classList.remove('hidden');
+            }
+        } catch (e) {
+            errorMsg.innerText = "Network error. Please try again.";
+            errorMsg.classList.remove('hidden');
+        }
     }
 
     // --- PROFILE NAME LOGIC ---

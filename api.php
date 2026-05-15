@@ -63,7 +63,7 @@ elseif ($action === 'deposit') {
     } else { echo json_encode(['status' => 'error']); }
 }
 // ==========================================
-// NEW: RESIDENT PROFILE UPDATE
+// RESIDENT PROFILE UPDATE
 // ==========================================
 elseif ($action === 'update_name') {
     $data = json_decode(file_get_contents('php://input'), true);
@@ -115,9 +115,67 @@ elseif ($action === 'release_lock') {
 }
 
 // ==========================================
+// PERSONNEL AUTHENTICATION & ADMIN CONTROLS
+// ==========================================
+elseif ($action === 'personnel_login') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    $user = $data['username'] ?? '';
+    $pass = $data['password'] ?? '';
+
+    $stmt = $pdo->prepare("SELECT * FROM personnel WHERE username = ?");
+    $stmt->execute([$user]);
+    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Matches the plain text password from the SQL dump
+    if ($admin && $admin['password_hash'] === $pass) {
+        $_SESSION['personnel_logged_in'] = true;
+        echo json_encode(['status' => 'success']);
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Invalid credentials']);
+    }
+}
+elseif ($action === 'logout') {
+    unset($_SESSION['personnel_logged_in']);
+    session_destroy();
+    echo json_encode(['status' => 'success']);
+}
+elseif ($action === 'update_admin') {
+    if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in'] !== true) {
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        exit;
+    }
+    $data = json_decode(file_get_contents('php://input'), true);
+    $user = $data['username'] ?? '';
+    $pass = $data['password'] ?? '';
+
+    if ($user && $pass) {
+        $stmt = $pdo->prepare("UPDATE personnel SET username = ?, password_hash = ? WHERE id = 1");
+        $stmt->execute([$user, $pass]);
+        echo json_encode(['status' => 'success']);
+    } else {
+        echo json_encode(['status' => 'error', 'message' => 'Missing fields']);
+    }
+}
+elseif ($action === 'get_all_history') {
+    if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in'] !== true) {
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized']);
+        exit;
+    }
+    $stmt = $pdo->query("
+        SELECT d.created_at, d.points_earned as points, d.bottle_size as detail, u.full_name, 'deposit' as type
+        FROM deposits d JOIN users u ON d.user_id = u.id
+        UNION ALL
+        SELECT r.created_at, r.points_deducted as points, r.reward_item as detail, u.full_name, 'redemption' as type
+        FROM redemptions r JOIN users u ON r.user_id = u.id
+        ORDER BY created_at DESC LIMIT 50
+    ");
+    $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo json_encode(['status' => 'success', 'data' => $history]);
+}
+
+// ==========================================
 // YOLO HARDWARE BRIDGES (PHP to Python)
 // ==========================================
-// We use a small timeout to prevent PHP from freezing if Python is off.
 elseif ($action === 'yolo_start') {
     $ctx = stream_context_create(['http' => ['timeout' => 2]]);
     $res = @file_get_contents('http://127.0.0.1:5000/start', false, $ctx);
@@ -133,10 +191,10 @@ elseif ($action === 'yolo_poll') {
     $res = @file_get_contents('http://127.0.0.1:5000/poll', false, $ctx);
     echo $res ? $res : json_encode(['status' => 'empty']);
 }
-// ------------------------------------------
 
-// Re-include remaining untouched api.php routes here (redeem, get_history, etc) 
-// Mocked redeem for completeness in this file context:
+// ==========================================
+// REDEEM
+// ==========================================
 elseif ($action === 'redeem') {
     $data = json_decode(file_get_contents('php://input'), true);
     $qr = $data['qr'] ?? '';
@@ -148,7 +206,7 @@ elseif ($action === 'redeem') {
         $update = $pdo->prepare("UPDATE users SET total_points = total_points - 100 WHERE id = ?");
         $update->execute([$user['id']]);
         
-        $insert = $pdo->prepare("INSERT INTO redemptions (user_id, reward_item, points_deducted) VALUES (?, 'Standard Redemption', 100)");
+        $insert = $pdo->prepare("INSERT INTO redemptions (user_id, reward_item, points_deducted) VALUES (?, '100 Points Reward', 100)");
         $insert->execute([$user['id']]);
         
         echo json_encode(['status' => 'success']);
