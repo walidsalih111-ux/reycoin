@@ -150,7 +150,7 @@ if (isset($_GET['ajax'])) {
                 <p class="text-lg font-bold text-green-400 uppercase tracking-widest mb-1">Resident Portal</p>
                 <p class="text-sm text-green-100 mb-2">Scan to track points</p>
                 <p class="text-xs font-mono text-white/70 bg-black/40 py-1.5 px-3 rounded-full inline-block tracking-widest border border-white/5">
-                    (10.0.0.1)
+                    10.0.0.1
                 </p>
             </div>
             <div class="bg-white p-3 rounded-2xl shadow-inner">
