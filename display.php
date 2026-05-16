@@ -135,13 +135,27 @@ if (isset($_GET['ajax'])) {
 
 <!-- USER SCREEN (Active Connection) -->
 <div id="user-screen" class="screen w-full max-w-6xl px-12">
-    <div class="flex items-center gap-8 mb-12 w-full">
+    <div class="flex items-center justify-between gap-8 mb-12 w-full">
         <div class="flex-1 min-w-0">
             <p class="text-2xl text-green-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-3">
                 <span class="inline-block rounded-full h-4 w-4 bg-green-500"></span>
                 Connected Resident
             </p>
             <h1 class="text-6xl font-black text-white truncate max-w-4xl" id="display-name">---</h1>
+        </div>
+        
+        <!-- Portal QR Code & Instructions -->
+        <div class="shrink-0 flex items-center gap-5 bg-black/20 backdrop-blur-md p-4 rounded-[32px] border border-white/10 shadow-2xl">
+            <div class="text-right">
+                <p class="text-lg font-bold text-green-400 uppercase tracking-widest mb-1">Resident Portal</p>
+                <p class="text-sm text-green-100 mb-2">Scan to track points</p>
+                <p class="text-xs font-mono text-white/70 bg-black/40 py-1.5 px-3 rounded-full inline-block tracking-widest border border-white/5">
+                    (10.0.0.1)
+                </p>
+            </div>
+            <div class="bg-white p-3 rounded-2xl shadow-inner">
+                <img src="assets/qr.png" alt="Portal Link QR" class="w-28 h-28 object-contain">
+            </div>
         </div>
     </div>
     
