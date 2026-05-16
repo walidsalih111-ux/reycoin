@@ -6,4 +6,3 @@ RECYCOIN
 
 
 1. add the ajax in index.php for redemptions of poiints by barangay personnel
-2. add the history button in index.php
