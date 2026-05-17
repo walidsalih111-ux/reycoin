@@ -33,41 +33,42 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 </style>
 </head>
 <body>
-<div class="app-container p-6 relative">
+<div class="app-container p-4 md:p-6 relative">
     
     <div id="toast" class="toast">Message</div>
 
+    <!-- FIXED: Header Overlap and Spacing -->
     <div class="flex items-center justify-between mb-6 pt-4">
-        <div>
+        <div class="flex-1 min-w-0 pr-2">
             <div class="flex items-center gap-2">
-                <img src="assets/logo.png" alt="Logo" class="w-8 h-8 rounded-full bg-white p-0.5 shadow-sm object-contain">
-                <h1 class="text-2xl font-bold tracking-wide">RECYCOIN</h1>
+                <img src="assets/logo.png" alt="Logo" class="w-7 h-7 rounded-full bg-white p-0.5 shadow-sm object-contain flex-shrink-0">
+                <h1 class="text-xl font-bold tracking-wide truncate">RECYCOIN</h1>
             </div>
-            <p class="text-sm text-green-200 mt-1">Barangay Personnel</p>
+            <p class="text-[13px] text-green-200 mt-1 truncate">Barangay Personnel</p>
         </div>
-        <div class="flex gap-2 items-center">
+        <div class="flex gap-1.5 items-center flex-shrink-0">
             
-            <!-- NEW: Bin Status Badge -->
-            <div class="bg-black/20 px-3 py-1.5 rounded-lg border border-white/10 text-center mr-1 tooltip" title="RVM Machine Fill Level">
-                <p class="text-[9px] text-green-200 uppercase tracking-wider mb-0.5 opacity-80">Bin Level</p>
-                <p class="text-sm font-bold text-white transition-colors duration-300" id="admin-bin-text">--%</p>
+            <!-- Bin Status Badge -->
+            <div class="bg-black/20 px-2.5 py-1.5 rounded-lg border border-white/10 text-center flex-shrink-0" title="RVM Machine Fill Level">
+                <p class="text-[9px] text-green-200 uppercase tracking-wider mb-0.5 opacity-80 leading-none">Bin Level</p>
+                <p class="text-[13px] font-bold text-white transition-colors duration-300 leading-none mt-1" id="admin-bin-text">--%</p>
             </div>
 
-            <button onclick="openEditCredentialsModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center" title="Edit Credentials">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <button onclick="openEditCredentialsModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center flex-shrink-0" title="Edit Credentials">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
             
-            <button onclick="openAdminHistoryModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center" title="Global History">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <button onclick="openAdminHistoryModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center flex-shrink-0" title="Global History">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             </button>
             
-            <button onclick="logoutPersonnel()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center gap-2 text-sm" title="Logout & Switch to Resident">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <button onclick="logoutPersonnel()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center flex-shrink-0" title="Logout">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
             </button>
         </div>
     </div>
 
-    <!-- NEW: Warning Banner for Bin Overflow -->
+    <!-- Warning Banner for Bin Overflow -->
     <div id="admin-bin-warning" class="hidden mb-6 bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl text-center font-bold text-[13px] animate-pulse shadow-md relative overflow-hidden">
         <div class="absolute inset-0 bg-red-500/10 blur-xl pointer-events-none"></div>
         <span class="relative z-10 flex items-center justify-center gap-2">
@@ -118,52 +119,56 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         </div>
     </div>
 
-    <!-- EDIT CREDENTIALS MODAL -->
-    <div id="edit-credentials-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-6 relative shadow-2xl text-gray-800">
-            <h2 class="text-xl font-bold text-[var(--g900)] mb-2">Edit Credentials</h2>
-            <p class="text-sm text-gray-500 mb-4">Update your admin username and password.</p>
-            
-            <input type="text" id="new-admin-user" class="w-full border p-4 rounded-xl mb-3 outline-none focus:border-[var(--g700)]" placeholder="New Username">
-            
-            <div class="relative mb-5">
-                <input type="password" id="new-admin-pass" class="w-full border p-4 rounded-xl outline-none focus:border-[var(--g700)] pr-12" placeholder="New Password">
-                <!-- Eye Icon Toggle -->
-                <button type="button" onclick="togglePasswordVisibility('new-admin-pass', 'eye-icon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[var(--g700)] focus:outline-none transition-colors">
-                    <svg id="eye-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                </button>
-            </div>
+    <!-- FIXED: EDIT CREDENTIALS MODAL -->
+    <div id="edit-credentials-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50">
+        <div class="w-full h-full flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-[400px] rounded-2xl p-6 relative shadow-2xl text-gray-800">
+                <h2 class="text-xl font-bold text-[var(--g900)] mb-2">Edit Credentials</h2>
+                <p class="text-sm text-gray-500 mb-4">Update your admin username and password.</p>
+                
+                <input type="text" id="new-admin-user" class="w-full border p-4 rounded-xl mb-3 outline-none focus:border-[var(--g700)]" placeholder="New Username">
+                
+                <div class="relative mb-5">
+                    <input type="password" id="new-admin-pass" class="w-full border p-4 rounded-xl outline-none focus:border-[var(--g700)] pr-12" placeholder="New Password">
+                    <!-- Eye Icon Toggle -->
+                    <button type="button" onclick="togglePasswordVisibility('new-admin-pass', 'eye-icon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[var(--g700)] focus:outline-none transition-colors">
+                        <svg id="eye-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
 
-            <div class="flex gap-3">
-                <button onclick="closeModal('edit-credentials-modal')" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
-                <button onclick="saveAdminCredentials()" class="flex-[2] py-4 bg-[var(--g700)] text-white rounded-xl font-bold hover:bg-green-800 transition">Save Changes</button>
+                <div class="flex gap-3">
+                    <button onclick="closeModal('edit-credentials-modal')" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
+                    <button onclick="saveAdminCredentials()" class="flex-[2] py-4 bg-[var(--g700)] text-white rounded-xl font-bold hover:bg-green-800 transition">Save Changes</button>
+                </div>
             </div>
         </div>
     </div>  
 
-    <!-- GLOBAL HISTORY LOG MODAL -->
-    <div id="admin-history-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex-col items-center justify-end p-0">
-        <div class="bg-white w-full max-w-md h-[80vh] rounded-t-3xl p-6 flex flex-col relative shadow-[0_-10px_40px_rgba(0,0,0,0.1)] text-gray-800">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-[var(--g900)]">Transaction History</h2>
-                <button onclick="closeAdminHistoryModal()" class="bg-gray-100 p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            
-            <div class="flex items-center gap-2 mb-4 bg-green-50 text-[var(--g700)] p-2 rounded-xl text-xs font-bold justify-center border border-green-100">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--g700)] opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-[var(--g700)]"></span>
-                </span>
-                LIVE UPDATES ACTIVE
-            </div>
+    <!-- FIXED: GLOBAL HISTORY LOG MODAL -->
+    <div id="admin-history-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50">
+        <div class="w-full h-full flex flex-col items-center justify-end p-0">
+            <div class="bg-white w-full max-w-[480px] h-[85vh] rounded-t-3xl p-6 flex flex-col relative shadow-[0_-10px_40px_rgba(0,0,0,0.1)] text-gray-800 m-0 border-none">
+                <div class="flex justify-between items-center mb-4 shrink-0">
+                    <h2 class="text-xl font-bold text-[var(--g900)]">Transaction History</h2>
+                    <button onclick="closeAdminHistoryModal()" class="bg-gray-100 p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                
+                <div class="flex items-center gap-2 mb-4 bg-green-50 text-[var(--g700)] p-2 rounded-xl text-xs font-bold justify-center border border-green-100 shrink-0">
+                    <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--g700)] opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-[var(--g700)]"></span>
+                    </span>
+                    LIVE UPDATES ACTIVE
+                </div>
 
-            <div class="overflow-y-auto flex-1 pb-4" id="admin-history-list">
-                <p class="text-center text-sm text-gray-400 mt-10">Loading history...</p>
+                <div class="overflow-y-auto flex-1 pb-4" id="admin-history-list">
+                    <p class="text-center text-sm text-gray-400 mt-10">Loading history...</p>
+                </div>
             </div>
         </div>
     </div>
