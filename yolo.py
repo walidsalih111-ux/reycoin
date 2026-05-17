@@ -173,10 +173,8 @@ def main_gui_loop():
                     w, h = float(box.xywh[0][2]), float(box.xywh[0][3])
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     
-                    # 1. Reject Sideways Bottles
+                    # 1. Reject Sideways Bottles (Silently skip)
                     if w > h:
-                        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 165, 255), 2)
-                        cv2.putText(frame, "REJECTED (Sideways)", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
                         continue
                     
                     h_frame, w_frame = frame.shape[:2]
