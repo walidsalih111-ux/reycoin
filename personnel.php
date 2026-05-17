@@ -12,10 +12,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>RECYCOIN - Personnel Admin</title>
-<!-- <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"> -->
-<!-- <script src="https://cdn.tailwindcss.com"></script> -->
-
+<title>RECYCOIN - Personnel</title>
 <script src="functions/font.js"></script>
 <script src="functions/tailwind.js"></script>
 
@@ -44,8 +41,11 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 
     <div class="flex items-center justify-between mb-8 pt-4">
         <div>
-            <h1 class="text-2xl font-bold tracking-wide">RECYCOIN Admin</h1>
-            <p class="text-sm text-green-200">Barangay Hall Personnel</p>
+            <div class="flex items-center gap-2">
+                <img src="assets/logo.png" alt="Logo" class="w-8 h-8 rounded-full bg-white p-0.5 shadow-sm object-contain">
+                <h1 class="text-2xl font-bold tracking-wide">RECYCOIN</h1>
+            </div>
+            <p class="text-sm text-green-200 mt-1">Barangay Personnel</p>
         </div>
         <div class="flex gap-2">
             <!-- Edit Credentials Icon -->

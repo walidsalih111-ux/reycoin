@@ -139,7 +139,7 @@ if (isset($_GET['ajax'])) {
         <div class="flex-1 min-w-0">
             <p class="text-2xl text-green-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-3">
                 <span class="inline-block rounded-full h-4 w-4 bg-green-500"></span>
-                Connected Resident
+                Connected
             </p>
             <h1 class="text-6xl font-black text-white truncate max-w-4xl" id="display-name">---</h1>
         </div>
