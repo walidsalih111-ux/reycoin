@@ -54,7 +54,7 @@
                     </button>
                 </div>
                 <p class="text-sm text-green-200 font-medium mb-1 mt-1">Balance</p>
-                <h2 class="text-4xl font-black tracking-tighter" id="total-points">0.00</h2>
+                <h2 class="text-4xl font-black tracking-tighter transition-all duration-300" id="total-points">0.00</h2>
             </div>
         </div>
     </div>
@@ -175,6 +175,7 @@
     let myAssignedQR = null; 
     let timerInterval;
     let yoloPollInterval;
+    let syncDataInterval; // Variable for user data sync
     let timeLeft = 60;
     let sessionPoints = 0;
     let sessionBottles = 0;
@@ -200,8 +201,54 @@
                 if (json.data.is_new || json.data.full_name.startsWith('Resident (')) {
                     openEditNameModal(true);
                 }
+
+                // Start synchronizing user data with the server periodically
+                if (!syncDataInterval) {
+                    syncDataInterval = setInterval(syncUserData, 3000);
+                }
             }
         } catch(e) {}
+    }
+
+    // --- REAL-TIME DATA SYNCHRONIZATION ---
+    async function syncUserData() {
+        if (!myAssignedQR) return;
+        try {
+            let res = await fetch(`api.php?action=get_user&qr=${myAssignedQR}`);
+            let json = await res.json();
+            if (json.status === 'success') {
+                let currentPtsText = document.getElementById('total-points').innerText;
+                let newPtsVal = parseFloat(json.data.total_points);
+                let newPtsText = newPtsVal.toFixed(2);
+                
+                // If points changed remotely (e.g. Personnel Redemption)
+                if (currentPtsText !== newPtsText) {
+                    let ptsEl = document.getElementById('total-points');
+                    let diff = newPtsVal - parseFloat(currentPtsText);
+                    
+                    ptsEl.innerText = newPtsText;
+                    
+                    // Flash effect to draw attention
+                    ptsEl.classList.add('text-green-300', 'scale-110');
+                    setTimeout(() => ptsEl.classList.remove('text-green-300', 'scale-110'), 400);
+
+                    // If points decreased, it means a redemption occurred
+                    if (diff < 0) {
+                        showToast(`Redemption complete! ${Math.abs(diff).toFixed(2)} pts spent.`);
+                    }
+                }
+
+                // Keep name in sync across devices (if not currently editing)
+                if (!isForceName) {
+                    let currentName = document.getElementById('user-name').innerText;
+                    if (currentName !== json.data.full_name) {
+                        document.getElementById('user-name').innerText = json.data.full_name;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Sync error:", e);
+        }
     }
 
     // --- PERSONNEL LOGIN LOGIC ---
