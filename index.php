@@ -66,7 +66,9 @@
                 <p class="font-mono text-xl font-bold text-[var(--green-900)] tracking-widest" id="resident-id-text">Loading...</p>
             </div>
         </div>
-        <button onclick="openDepositModal()" class="w-full bg-[var(--green-700)] text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-transform">
+        
+        <!-- Modified to include an ID for dynamic disabling based on bin fill level -->
+        <button id="insert-bottle-btn" onclick="openDepositModal()" class="w-full bg-[var(--green-700)] text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all duration-300">
             Insert Bottle
         </button>
 
@@ -180,6 +182,7 @@
     let sessionPoints = 0;
     let sessionBottles = 0;
     let isForceName = false;
+    let binIsFull = false; // NEW: Global bin status state
 
     function showToast(msg) {
         const t = document.getElementById('toast');
@@ -202,9 +205,38 @@
                     openEditNameModal(true);
                 }
 
-                // Start synchronizing user data with the server periodically
+                // Start synchronizing user data and bin status periodically
                 if (!syncDataInterval) {
-                    syncDataInterval = setInterval(syncUserData, 3000);
+                    syncDataInterval = setInterval(() => {
+                        syncUserData();
+                        pollBinStatus(); // Continuously fetch bin level
+                    }, 3000);
+                    pollBinStatus(); // Initial fetch
+                }
+            }
+        } catch(e) {}
+    }
+
+    // --- NEW: POLL RVM BIN LEVEL ---
+    async function pollBinStatus() {
+        try {
+            let res = await fetch('api.php?action=bin_status');
+            let json = await res.json();
+            if (json.status === 'success') {
+                binIsFull = json.is_full;
+                
+                // Update Insert Button visual state
+                const insertBtn = document.getElementById('insert-bottle-btn');
+                if (insertBtn) {
+                    if (binIsFull) {
+                        insertBtn.classList.add('opacity-50', 'bg-red-600', 'cursor-not-allowed');
+                        insertBtn.classList.remove('bg-[var(--green-700)]');
+                        insertBtn.innerText = "Bin Full - Cannot Insert";
+                    } else {
+                        insertBtn.classList.remove('opacity-50', 'bg-red-600', 'cursor-not-allowed');
+                        insertBtn.classList.add('bg-[var(--green-700)]');
+                        insertBtn.innerText = "Insert Bottle";
+                    }
                 }
             }
         } catch(e) {}
@@ -368,6 +400,12 @@
     // --- YOLO & RVM MODAL LOGIC ---
     async function openDepositModal() {
         if(!myAssignedQR) return;
+
+        // Block opening of modal if machine is entirely full
+        if (binIsFull) {
+            showToast("Bin is currently full! Please wait for personnel to empty it.");
+            return;
+        }
         
         let res = await fetch(`api.php?action=request_lock&qr=${myAssignedQR}`);
         let json = await res.json();
@@ -383,6 +421,13 @@
     }
 
     async function pollYoloDetection() {
+        // Double check while inside loop if it suddenly became full
+        if (binIsFull) {
+            closeDepositModal();
+            showToast("Machine reached full capacity. Session auto-closed.");
+            return;
+        }
+
         try {
             let res = await fetch('api.php?action=yolo_poll');
             let json = await res.json();

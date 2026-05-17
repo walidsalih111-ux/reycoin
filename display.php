@@ -133,7 +133,7 @@ if (isset($_GET['ajax'])) {
 
 <!-- USER SCREEN (Active Connection) -->
 <div id="user-screen" class="screen w-full max-w-6xl px-12">
-    <div class="flex items-center justify-between gap-8 mb-12 w-full">
+    <div class="flex items-center justify-between gap-8 mb-8 w-full">
         <div class="flex-1 min-w-0">
             <p class="text-2xl text-green-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-3">
                 <span class="inline-block rounded-full h-4 w-4 bg-green-500"></span>
@@ -142,21 +142,39 @@ if (isset($_GET['ajax'])) {
             <h1 class="text-6xl font-black text-white truncate max-w-4xl" id="display-name">---</h1>
         </div>
         
-        <!-- Portal QR Code & Instructions -->
-        <div class="shrink-0 flex items-center gap-5 bg-black/20 backdrop-blur-md p-4 rounded-[32px] border border-white/10 shadow-2xl">
-            <div class="text-right">
-                <p class="text-lg font-bold text-green-400 uppercase tracking-widest mb-1">Resident Portal</p>
-                <p class="text-sm text-green-100 mb-2">Scan to track points</p>
-                <p class="text-xs font-mono text-white/70 bg-black/40 py-1.5 px-3 rounded-full inline-block tracking-widest border border-white/5">
-                    10.0.0.1
-                </p>
+        <!-- NEW STYLE: Header Badge & Portal QR Code -->
+        <div class="flex items-center gap-4 shrink-0">
+            <!-- Redesigned Bin Level Badge -->
+            <div class="bg-black/20 px-6 py-4 rounded-[32px] border border-white/10 text-center flex flex-col justify-center shadow-2xl h-full backdrop-blur-md">
+                <p class="text-sm text-green-200 uppercase tracking-widest mb-1 opacity-80">Bin Level</p>
+                <p class="text-3xl font-bold text-white transition-colors duration-300" id="display-bin-text">--%</p>
             </div>
-            <div class="bg-white p-3 rounded-2xl shadow-inner">
-                <img src="assets/qr.png" alt="Portal Link QR" class="w-28 h-28 object-contain">
+            
+            <!-- Portal QR Instructions -->
+            <div class="flex items-center gap-5 bg-black/20 backdrop-blur-md p-4 rounded-[32px] border border-white/10 shadow-2xl">
+                <div class="text-right">
+                    <p class="text-lg font-bold text-green-400 uppercase tracking-widest mb-1">Resident Portal</p>
+                    <p class="text-sm text-green-100 mb-2">Scan to track points</p>
+                    <p class="text-xs font-mono text-white/70 bg-black/40 py-1.5 px-3 rounded-full inline-block tracking-widest border border-white/5">
+                        10.0.0.1
+                    </p>
+                </div>
+                <div class="bg-white p-3 rounded-2xl shadow-inner">
+                    <img src="assets/qr.png" alt="Portal Link QR" class="w-28 h-28 object-contain">
+                </div>
             </div>
         </div>
     </div>
     
+    <!-- WARNING MESSAGE BANNER (Hidden by default) -->
+    <div id="display-bin-warning" class="hidden w-full mb-8 bg-red-500/20 border border-red-500/50 text-red-200 p-6 rounded-[24px] text-center font-bold text-2xl animate-pulse shadow-md relative overflow-hidden">
+        <div class="absolute inset-0 bg-red-500/10 blur-xl pointer-events-none"></div>
+        <span class="relative z-10 flex items-center justify-center gap-4">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            RVM BIN IS FULL! MACHINE IS DISABLED. PLEASE EMPTY.
+        </span>
+    </div>
+
     <div class="grid grid-cols-5 gap-8 w-full">
         <div class="col-span-3 bg-white/5 backdrop-blur-xl rounded-[40px] p-12 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col justify-center">
             <div class="absolute -right-20 -top-20 w-64 h-64 bg-green-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -169,26 +187,6 @@ if (isset($_GET['ajax'])) {
             <div class="bg-black/40 py-6 px-8 rounded-3xl border border-white/5 shadow-inner">
                 <p class="text-4xl font-mono text-green-400 font-bold tracking-widest text-center" id="display-qr">RC-----</p>
             </div>
-        </div>
-    </div>
-
-    <!-- NEW: Bin Fill Level Monitor UI -->
-    <div class="mt-8 bg-white/5 backdrop-blur-xl rounded-[40px] p-8 border border-white/10 shadow-2xl w-full">
-        <div class="flex items-center justify-between mb-4">
-            <p class="text-xl text-green-200 font-medium flex items-center gap-3">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                RVM Bin Fill Level
-            </p>
-            <p class="text-3xl font-black text-white" id="display-bin-text">0%</p>
-        </div>
-        
-        <div class="w-full bg-black/40 rounded-full h-8 border border-white/5 overflow-hidden shadow-inner relative">
-            <div id="display-bin-bar" class="h-full bg-green-500 rounded-full transition-all duration-500 w-0"></div>
-        </div>
-        
-        <!-- WARNING MESSAGE (Hidden by default) -->
-        <div id="display-bin-warning" class="hidden mt-6 bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-2xl text-center text-xl font-bold tracking-widest animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-            ⚠️ BIN IS FULL! TRAPDOOR MECHANISM DISABLED ⚠️
         </div>
     </div>
 </div>
@@ -204,24 +202,22 @@ if (isset($_GET['ajax'])) {
             
             // --- UPDATE BIN STATUS UI ---
             if (json.bin) {
-                let bar = document.getElementById('display-bin-bar');
                 let txt = document.getElementById('display-bin-text');
                 let warn = document.getElementById('display-bin-warning');
                 
-                if (bar && txt && warn) {
-                    bar.style.width = json.bin.fill_percent + '%';
+                if (txt && warn) {
                     txt.innerText = json.bin.fill_percent + '%';
                     
-                    // Progress Bar Color Logic
+                    // Text Color Logic Matching Personnel.php
                     if (json.bin.fill_percent >= 90) {
-                        bar.className = 'h-full rounded-full transition-all duration-500 bg-red-500 shadow-[0_0_15px_#ef4444]';
+                        txt.className = 'text-3xl font-bold transition-colors duration-300 text-red-400 shadow-red-500/20';
                     } else if (json.bin.fill_percent >= 60) {
-                        bar.className = 'h-full rounded-full transition-all duration-500 bg-yellow-500 shadow-[0_0_15px_#eab308]';
+                        txt.className = 'text-3xl font-bold transition-colors duration-300 text-yellow-400 shadow-yellow-500/20';
                     } else {
-                        bar.className = 'h-full rounded-full transition-all duration-500 bg-green-500 shadow-[0_0_15px_#22c55e]';
+                        txt.className = 'text-3xl font-bold transition-colors duration-300 text-white';
                     }
 
-                    // Display warning lockout text if 95% threshold reached
+                    // Display warning lockout banner if 95% threshold reached
                     if (json.bin.is_full) {
                         warn.classList.remove('hidden');
                     } else {

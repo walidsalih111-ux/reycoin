@@ -201,6 +201,9 @@ def main_gui_loop():
             time.sleep(0.1)
             continue
 
+        # Get bin status once per frame to lock interactions if needed
+        fill_pct, is_full = get_bin_status()
+
         results = model(frame, classes=[BOTTLE_CLASS_ID], verbose=False, imgsz=320)
         bottle_detected = False
 
@@ -208,7 +211,6 @@ def main_gui_loop():
             for box in result.boxes:
                 conf = float(box.conf[0])
                 if conf > 0.60: 
-                    
                     bottle_detected = True 
                     w, h = float(box.xywh[0][2]), float(box.xywh[0][3])
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -230,11 +232,19 @@ def main_gui_loop():
 
                     current_time = time.time()
                     if (current_time - last_detection_time) > COOLDOWN_SECONDS:
-                        detected_queue.append({"size": size_cat, "points": points})
-                        last_detection_time = current_time
-                        
-                        # Trigger trapdoor asynchronously
-                        threading.Thread(target=open_trapdoor, daemon=True).start()
+                        # NEW CHECK: Prevent accumulating points if the machine is full
+                        if not is_full:
+                            detected_queue.append({"size": size_cat, "points": points})
+                            last_detection_time = current_time
+                            
+                            # Trigger trapdoor asynchronously
+                            threading.Thread(target=open_trapdoor, daemon=True).start()
+                        else:
+                            print(f"Skipping point allocation. Bin is full ({fill_pct}%).")
+
+        # Natively Display Warning if the machine is full
+        if is_full:
+            cv2.putText(frame, f"BIN FULL ({fill_pct}%) - DISABLED", (30, 60), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 3)
 
         if bottle_detected:
             cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
