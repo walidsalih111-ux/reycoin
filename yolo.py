@@ -5,7 +5,7 @@ import numpy as np
 from flask import Flask, jsonify
 from flask_cors import CORS # type: ignore
 from ultralytics import YOLO # type: ignore
-from gpiozero import AngularServo # ---> NEW: Hardware Control
+from gpiozero import AngularServo, DistanceSensor # ---> NEW: Hardware Control
 
 # ==========================================
 # 1. INITIALIZE FLASK & YOLO MODEL
@@ -17,10 +17,10 @@ model = YOLO('yolov8n.pt')
 BOTTLE_CLASS_ID = 39 
 
 # ==========================================
-# 2. HARDWARE INITIALIZATION (SG90 Servo)
+# 2. HARDWARE INITIALIZATION (Servo & Ultrasonic)
 # ==========================================
+# Initialize Servo (Trapdoor)
 try:
-    # Using the exact parameters from your successful servo test
     servo = AngularServo(17, min_angle=-180, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0024)
     servo.angle = -180  # Default state: Flap Closed
     print("✅ Hardware: Servo Motor Initialized. Flap is closed.")
@@ -28,8 +28,47 @@ except Exception as e:
     print("⚠️ WARNING: Servo init failed. Running without hardware flap.", e)
     servo = None
 
+# Initialize Ultrasonic Sensor (Bin Level)
+try:
+    sensor = DistanceSensor(echo=24, trigger=23)
+    print("✅ Hardware: Ultrasonic Sensor Initialized.")
+except Exception as e:
+    print("⚠️ WARNING: Ultrasonic init failed.", e)
+    sensor = None
+
+# Physical Bin Configuration
+BIN_HEIGHT_CM = 106.68 # 3.5 ft total height
+MAX_FILL_CM = 15.0     # Clearance from top sensor to be considered 100% full
+
+def get_bin_status():
+    """Calculates the fill percentage based on ultrasonic distance reading."""
+    if sensor:
+        try:
+            # sensor.distance returns meters, multiply by 100 for cm
+            dist_cm = sensor.distance * 100
+            
+            current_fill_height = BIN_HEIGHT_CM - dist_cm
+            usable_height = BIN_HEIGHT_CM - MAX_FILL_CM
+            
+            fill_pct = (current_fill_height / usable_height) * 100
+            fill_pct = max(0.0, min(100.0, fill_pct)) # Clamp between 0% and 100%
+            
+            is_full = fill_pct >= 95.0 # Flag as full when capacity reaches 95%
+            return round(fill_pct, 1), is_full
+        except Exception as e:
+            print(f"Sensor read error: {e}")
+            return 0.0, False
+    return 0.0, False
+
 def open_trapdoor():
-    """Opens the trapdoor for 2 seconds to accept the bottle, then closes."""
+    """Opens the trapdoor for 2 seconds to accept the bottle, but aborts if the bin is full."""
+    fill_pct, is_full = get_bin_status()
+    
+    # SAFETY LOCKOUT: Do not operate servo if the bin is overflowing
+    if is_full:
+        print(f">> Trapdoor aborted: BIN IS FULL! ({fill_pct}%)")
+        return
+        
     if servo:
         try:
             print(">> Triggering Trapdoor: OPEN")
@@ -66,10 +105,7 @@ def estimate_size_and_points(width, height):
         return "1.5L", 3.0
 
 def is_bottle_upright(roi):
-    """
-    Heuristic to determine if a detected PET bottle is upright.
-    Compares the horizontal span of edges in the top quarter vs bottom quarter.
-    """
+    """Heuristic to determine if a detected PET bottle is upright."""
     h, w = roi.shape[:2]
     
     if h < 40 or w < 20:
@@ -98,7 +134,6 @@ def is_bottle_upright(roi):
         
     return bottom_width >= (top_width * 0.85)
 
-
 # ==========================================
 # 4. FLASK API ENDPOINTS
 # ==========================================
@@ -122,6 +157,12 @@ def poll_detection():
         return jsonify({"status": "success", "size": data["size"], "points": data["points"]})
     return jsonify({"status": "empty"})
 
+@app.route('/status')
+def system_status():
+    """Provides real-time hardware status (Fill Level) to the web dashboard"""
+    fill_pct, is_full = get_bin_status()
+    return jsonify({"status": "success", "fill_percent": fill_pct, "is_full": is_full})
+
 # ==========================================
 # 5. OPENCV NATIVE GUI LOOP (Main Thread)
 # ==========================================
@@ -144,7 +185,6 @@ def main_gui_loop():
         if cap is None:
             cap = cv2.VideoCapture(0)
             
-            # Raspberry Pi 5 Performance Optimizations
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
@@ -173,33 +213,27 @@ def main_gui_loop():
                     w, h = float(box.xywh[0][2]), float(box.xywh[0][3])
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     
-                    # 1. Reject Sideways Bottles (Silently skip)
-                    if w > h:
-                        continue
+                    if w > h: continue
                     
                     h_frame, w_frame = frame.shape[:2]
                     x1_safe, y1_safe = max(0, x1), max(0, y1)
                     x2_safe, y2_safe = min(w_frame, x2), min(h_frame, y2)
                     roi = frame[y1_safe:y2_safe, x1_safe:x2_safe]
                     
-                    # 2. Reject Upside Down Bottles
-                    if not is_bottle_upright(roi):
-                        continue
+                    if not is_bottle_upright(roi): continue
                     
-                    # --- BOTTLE IS VALID ---
                     size_cat, points = estimate_size_and_points(w, h)
                     
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     label = f"PET {size_cat} (+{points}pts)"
                     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-                    # Accumulate logic (with cooldown)
                     current_time = time.time()
                     if (current_time - last_detection_time) > COOLDOWN_SECONDS:
                         detected_queue.append({"size": size_cat, "points": points})
                         last_detection_time = current_time
                         
-                        # ---> NEW: TRIGGER THE TRAPDOOR HARDWARE <---
+                        # Trigger trapdoor asynchronously
                         threading.Thread(target=open_trapdoor, daemon=True).start()
 
         if bottle_detected:

@@ -1,5 +1,4 @@
 <?php
-
 require 'config.php';
 
 // --- AJAX POLLING BACKEND ---
@@ -54,10 +53,21 @@ if (isset($_GET['ajax'])) {
         $active_user = $fallback_stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    // Fetch Bin Status from hardware endpoint
+    $bin_status = ['fill_percent' => 0, 'is_full' => false];
+    $ctx = stream_context_create(['http' => ['timeout' => 1]]);
+    $bin_res = @file_get_contents('http://127.0.0.1:5000/status', false, $ctx);
+    if ($bin_res) {
+        $parsed = json_decode($bin_res, true);
+        if ($parsed && isset($parsed['fill_percent'])) {
+            $bin_status = $parsed;
+        }
+    }
+
     if ($active_user) {
-        echo json_encode(['status' => 'success', 'user' => $active_user]);
+        echo json_encode(['status' => 'success', 'user' => $active_user, 'bin' => $bin_status]);
     } else {
-        echo json_encode(['status' => 'empty']);
+        echo json_encode(['status' => 'empty', 'bin' => $bin_status]);
     }
     exit;
 }
@@ -91,10 +101,10 @@ if (isset($_GET['ajax'])) {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            display: none; /* Changed from opacity: 0 to display: none for instant switching */
+            display: none; 
         }
         .screen.active {
-            display: flex; /* Snap to visible */
+            display: flex; 
         }
         .points-display {
             font-size: 8rem;
@@ -102,17 +112,6 @@ if (isset($_GET['ajax'])) {
             font-weight: 900;
             color: var(--g400);
             text-shadow: 0 10px 30px rgba(93, 202, 165, 0.2);
-        }
-        .top-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 2rem 3rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 10;
         }
     </style>
 </head>
@@ -124,7 +123,6 @@ if (isset($_GET['ajax'])) {
     <p class="text-3xl text-green-200 mb-12">Scan to connect to our hotspot and start recycling.</p>
     
     <div class="bg-white p-8 rounded-[40px] shadow-[0_0_80px_rgba(93,202,165,0.15)] inline-block">
-        <!-- Using the requested wifiqr.jpg asset -->
         <img src="assets/wifiqr.jpg" onerror="this.src='wifiqr.jpg'" alt="Wi-Fi QR Code" class="w-80 h-80 mx-auto">
     </div>
     
@@ -160,7 +158,7 @@ if (isset($_GET['ajax'])) {
     </div>
     
     <div class="grid grid-cols-5 gap-8 w-full">
-        <div class="col-span-3 bg-white/5 backdrop-blur-xl rounded-[40px] p-12 border border-white/10 shadow-2xl relative overflow-hidden">
+        <div class="col-span-3 bg-white/5 backdrop-blur-xl rounded-[40px] p-12 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col justify-center">
             <div class="absolute -right-20 -top-20 w-64 h-64 bg-green-500/10 rounded-full blur-3xl pointer-events-none"></div>
             <p class="text-2xl text-green-200 font-medium mb-6 relative z-10">Total Points Balance</p>
             <div class="points-display relative z-10" id="display-points">0.00</div>
@@ -173,6 +171,26 @@ if (isset($_GET['ajax'])) {
             </div>
         </div>
     </div>
+
+    <!-- NEW: Bin Fill Level Monitor UI -->
+    <div class="mt-8 bg-white/5 backdrop-blur-xl rounded-[40px] p-8 border border-white/10 shadow-2xl w-full">
+        <div class="flex items-center justify-between mb-4">
+            <p class="text-xl text-green-200 font-medium flex items-center gap-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                RVM Bin Fill Level
+            </p>
+            <p class="text-3xl font-black text-white" id="display-bin-text">0%</p>
+        </div>
+        
+        <div class="w-full bg-black/40 rounded-full h-8 border border-white/5 overflow-hidden shadow-inner relative">
+            <div id="display-bin-bar" class="h-full bg-green-500 rounded-full transition-all duration-500 w-0"></div>
+        </div>
+        
+        <!-- WARNING MESSAGE (Hidden by default) -->
+        <div id="display-bin-warning" class="hidden mt-6 bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-2xl text-center text-xl font-bold tracking-widest animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.3)]">
+            ⚠️ BIN IS FULL! TRAPDOOR MECHANISM DISABLED ⚠️
+        </div>
+    </div>
 </div>
 
 <script>
@@ -181,10 +199,37 @@ if (isset($_GET['ajax'])) {
     // Data Polling Logic
     async function pollStatus() {
         try {
-            // FIX: Changed 'lcddisplay.php' to 'display.php' so it hits the internal PHP block
             let res = await fetch('display.php?ajax=1');
             let json = await res.json();
             
+            // --- UPDATE BIN STATUS UI ---
+            if (json.bin) {
+                let bar = document.getElementById('display-bin-bar');
+                let txt = document.getElementById('display-bin-text');
+                let warn = document.getElementById('display-bin-warning');
+                
+                if (bar && txt && warn) {
+                    bar.style.width = json.bin.fill_percent + '%';
+                    txt.innerText = json.bin.fill_percent + '%';
+                    
+                    // Progress Bar Color Logic
+                    if (json.bin.fill_percent >= 90) {
+                        bar.className = 'h-full rounded-full transition-all duration-500 bg-red-500 shadow-[0_0_15px_#ef4444]';
+                    } else if (json.bin.fill_percent >= 60) {
+                        bar.className = 'h-full rounded-full transition-all duration-500 bg-yellow-500 shadow-[0_0_15px_#eab308]';
+                    } else {
+                        bar.className = 'h-full rounded-full transition-all duration-500 bg-green-500 shadow-[0_0_15px_#22c55e]';
+                    }
+
+                    // Display warning lockout text if 95% threshold reached
+                    if (json.bin.is_full) {
+                        warn.classList.remove('hidden');
+                    } else {
+                        warn.classList.add('hidden');
+                    }
+                }
+            }
+
             if (json.status === 'success' && json.user) {
                 let u = json.user;
                 

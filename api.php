@@ -176,6 +176,15 @@ elseif ($action === 'get_all_history') {
 // ==========================================
 // YOLO HARDWARE BRIDGES (PHP to Python)
 // ==========================================
+elseif ($action === 'bin_status') {
+    $ctx = stream_context_create(['http' => ['timeout' => 2]]);
+    $res = @file_get_contents('http://127.0.0.1:5000/status', false, $ctx);
+    if ($res) {
+        echo $res;
+    } else {
+        echo json_encode(['status' => 'error', 'fill_percent' => 0, 'is_full' => false]);
+    }
+}
 elseif ($action === 'yolo_start') {
     $ctx = stream_context_create(['http' => ['timeout' => 2]]);
     $res = @file_get_contents('http://127.0.0.1:5000/start', false, $ctx);

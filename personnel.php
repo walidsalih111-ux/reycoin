@@ -2,7 +2,6 @@
 // AT THE VERY TOP: Validate the Session
 session_start();
 if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in'] !== true) {
-    // If not logged in, redirect them immediately to the index page.
     header("Location: index.php");
     exit;
 }
@@ -27,7 +26,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; opacity: 0; transition: 0.3s; z-index: 100; white-space: nowrap;}
     .toast.show { opacity: 1; }
     
-    /* Scrollbar styling for history modal */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -39,7 +37,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     
     <div id="toast" class="toast">Message</div>
 
-    <div class="flex items-center justify-between mb-8 pt-4">
+    <div class="flex items-center justify-between mb-6 pt-4">
         <div>
             <div class="flex items-center gap-2">
                 <img src="assets/logo.png" alt="Logo" class="w-8 h-8 rounded-full bg-white p-0.5 shadow-sm object-contain">
@@ -47,22 +45,35 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
             </div>
             <p class="text-sm text-green-200 mt-1">Barangay Personnel</p>
         </div>
-        <div class="flex gap-2">
-            <!-- Edit Credentials Icon -->
+        <div class="flex gap-2 items-center">
+            
+            <!-- NEW: Bin Status Badge -->
+            <div class="bg-black/20 px-3 py-1.5 rounded-lg border border-white/10 text-center mr-1 tooltip" title="RVM Machine Fill Level">
+                <p class="text-[9px] text-green-200 uppercase tracking-wider mb-0.5 opacity-80">Bin Level</p>
+                <p class="text-sm font-bold text-white transition-colors duration-300" id="admin-bin-text">--%</p>
+            </div>
+
             <button onclick="openEditCredentialsModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center" title="Edit Credentials">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
             
-            <!-- Global History Icon -->
             <button onclick="openAdminHistoryModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center" title="Global History">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             </button>
             
-            <!-- Logout Icon -->
             <button onclick="logoutPersonnel()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center gap-2 text-sm" title="Logout & Switch to Resident">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
             </button>
         </div>
+    </div>
+
+    <!-- NEW: Warning Banner for Bin Overflow -->
+    <div id="admin-bin-warning" class="hidden mb-6 bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl text-center font-bold text-[13px] animate-pulse shadow-md relative overflow-hidden">
+        <div class="absolute inset-0 bg-red-500/10 blur-xl pointer-events-none"></div>
+        <span class="relative z-10 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            RVM BIN IS FULL! MACHINE IS DISABLED. PLEASE EMPTY.
+        </span>
     </div>
 
     <!-- Step 1: ID Entry -->
@@ -77,7 +88,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         </button>
     </div>
 
-    <!-- Step 2: Immediate 100 Pt Reward (Hidden initially) -->
+    <!-- Step 2: Immediate 100 Pt Reward -->
     <div id="step-reward" class="card hidden">
         <div class="flex justify-between items-start mb-6">
             <div>
@@ -101,7 +112,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         </button>
         
         <div class="text-center">
-            <!-- CANCEL BUTTON: Properly hooked to the resetScan() function -->
             <button onclick="resetScan()" class="text-[15px] text-gray-400 underline font-medium hover:text-gray-600 transition-colors py-2 px-4 rounded-lg active:bg-gray-50">
                 Cancel
             </button>
@@ -153,7 +163,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
             </div>
 
             <div class="overflow-y-auto flex-1 pb-4" id="admin-history-list">
-                <!-- History Items injected via JS -->
                 <p class="text-center text-sm text-gray-400 mt-10">Loading history...</p>
             </div>
         </div>
@@ -165,6 +174,44 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     let currentResident = null;
     let historyPollingInterval = null;
 
+    // --- NEW: BIN LEVEL POLLING --- //
+    async function fetchBinStatus() {
+        try {
+            let res = await fetch('api.php?action=bin_status');
+            let json = await res.json();
+            if (json.status === 'success') {
+                let fill = parseFloat(json.fill_percent);
+                let textEl = document.getElementById('admin-bin-text');
+                let warningEl = document.getElementById('admin-bin-warning');
+                
+                textEl.innerText = fill + '%';
+                
+                // Color Code Based on Fill Severity
+                if (fill >= 90) {
+                    textEl.classList.add('text-red-400');
+                    textEl.classList.remove('text-yellow-400', 'text-white');
+                } else if (fill >= 60) {
+                    textEl.classList.add('text-yellow-400');
+                    textEl.classList.remove('text-red-400', 'text-white');
+                } else {
+                    textEl.classList.add('text-white');
+                    textEl.classList.remove('text-red-400', 'text-yellow-400');
+                }
+
+                if (json.is_full) {
+                    warningEl.classList.remove('hidden');
+                } else {
+                    warningEl.classList.add('hidden');
+                }
+            }
+        } catch(e) {}
+    }
+    
+    // Initialize Bin Polling
+    fetchBinStatus();
+    setInterval(fetchBinStatus, 3000);
+
+    // --- MISC CONTROLS --- //
     function showToast(msg) {
         const t = document.getElementById('toast');
         t.innerText = msg;
@@ -176,7 +223,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         document.getElementById(id).classList.add('hidden');
     }
 
-    // --- LOGOUT LOGIC --- //
     async function logoutPersonnel() {
         try {
             await fetch('api.php?action=logout');
@@ -186,7 +232,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         }
     }
 
-    // --- CREDENTIALS MANAGEMENT --- //
     function openEditCredentialsModal() {
         document.getElementById('new-admin-user').value = '';
         document.getElementById('new-admin-pass').value = '';
@@ -229,7 +274,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         } catch(e) { showToast("Error updating credentials."); }
     }
 
-    // --- REAL-TIME HISTORY LOGIC --- //
     function openAdminHistoryModal() {
         document.getElementById('admin-history-modal').classList.remove('hidden');
         fetchGlobalHistory();
@@ -289,14 +333,11 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         }).join('');
     }
 
-    // --- VERIFICATION & REDEMPTION LOGIC --- //
     async function verifyQR() {
         const qr = document.getElementById('qr-input').value.trim();
         if(!qr) return showToast('Please enter a Resident ID code');
 
         try {
-            // Keep the 'qr' parameter mapping as the API logic expects it, 
-            // even though we are sending it manually via input text now.
             let res = await fetch(`api.php?action=get_user&qr=${qr}`);
             let json = await res.json();
             
@@ -317,7 +358,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         const btn = document.getElementById('redeem-btn');
         if (points >= 100) {
             btn.disabled = false;
-            // PERFECTLY MATCHING THE UI IN THE IMAGE
             btn.className = "w-full bg-[var(--g700)] text-white font-bold py-4 rounded-xl transition-all hover:bg-[#14663c] shadow-md relative flex items-center justify-center active:scale-[0.99] mb-4";
             btn.innerHTML = `
                 <div class="absolute left-5">
@@ -353,17 +393,14 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     }
 
     function resetScan() {
-        // Reset the form input and memory
         document.getElementById('qr-input').value = '';
         currentResident = null;
         
-        // Reset button visual state completely
         const btn = document.getElementById('redeem-btn');
         btn.disabled = true;
         btn.className = "w-full bg-gray-100 text-gray-400 font-bold py-4 rounded-xl transition-all cursor-not-allowed mb-4";
         btn.innerHTML = "Confirm 100 Pts Deduction";
         
-        // Switch views back to Step 1
         document.getElementById('step-reward').classList.add('hidden');
         document.getElementById('step-scan').classList.remove('hidden');
     }
