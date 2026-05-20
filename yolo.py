@@ -5,7 +5,7 @@ import numpy as np
 from flask import Flask, jsonify
 from flask_cors import CORS # type: ignore
 from ultralytics import YOLO # type: ignore
-from gpiozero import AngularServo, DistanceSensor # ---> NEW: Hardware Control
+from gpiozero import AngularServo, DistanceSensor # ---> Hardware Control
 
 # ==========================================
 # 1. INITIALIZE FLASK & YOLO MODEL
@@ -20,11 +20,13 @@ BOTTLE_CLASS_ID = 39
 # 2. HARDWARE INITIALIZATION (Servo & Ultrasonic)
 # ==========================================
 try:
-    servo = AngularServo(17, min_angle=-90, max_angle=90, min_pulse_width=0.0005, max_pulse_width=0.0024)
-    servo.angle = -90  # Default state: Flap Closed
-    time.sleep(0.5)    # Give it a brief moment to reach -90
-    servo.detach()     # <--- ADD THIS: Cut the signal immediately to stop idle shaking!
-    print("✅ Hardware: Servo Motor Initialized. Flap is closed and detached.")
+    # Set physical limits to 0 to 180 degrees mapped to standard servo pulse bounds (0.5ms to 2.5ms).
+    # This allows us to command precise angles inside the 180° range.
+    servo = AngularServo(17, min_angle=0, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0025)
+    servo.angle = 0    # Default state: Flap Closed (0 degrees)
+    time.sleep(0.5)    # Allow the servo to reach position
+    servo.detach()     # Cut control signal to stop idle jitter/humming!
+    print("✅ Hardware: Servo Motor Initialized. Flap is closed (0°) and detached.")
 except Exception as e:
     print("⚠️ WARNING: Servo init failed. Running without hardware flap.", e)
     servo = None
@@ -62,7 +64,8 @@ def get_bin_status():
     return 0.0, False
 
 def open_trapdoor():
-    """Opens the trapdoor for 2 seconds to accept the bottle, but aborts if the bin is full."""
+    """Opens the trapdoor by rotating to 90°, pauses for 2 seconds, then rotates back to 0°."""
+    global trapdoor_busy
     fill_pct, is_full = get_bin_status()
     
     if is_full:
@@ -71,23 +74,31 @@ def open_trapdoor():
         
     if servo:
         try:
-            print(">> Triggering Trapdoor: OPEN")
-            servo.angle = 90   # Re-engages automatically when angle is set
-            time.sleep(2.0)     
+            trapdoor_busy = True  # Lock out frame detection calculations during movement
             
-            print(">> Triggering Trapdoor: CLOSE")
-            servo.angle = -90  
-            time.sleep(0.6)    # Give it plenty of time to physically close completely
+            # Step 1: Rotate to 90 degrees (Midpoint of physical 180° capability)
+            print(">> Triggering Trapdoor: ROTATE TO 90° (OPEN)")
+            servo.angle = 90       # Re-engages pulse train automatically, moves to center 90°
+            time.sleep(1.5)        # Hold open for 1.5 seconds to let the bottle slip down
             
-            servo.detach()     # <--- ADD THIS: Kill the jitter signal until the next bottle drops!
-            print(">> Trapdoor parked and detached.")
+            # Step 2: Rotate back to 0 degrees (Closed position)
+            print(">> Triggering Trapdoor: ROTATE TO 0° (CLOSE)")
+            servo.angle = 0  
+            time.sleep(0.8)        # Allow plenty of time to physically return and rest at 0°
+            
+            # Step 3: Stop active signal
+            servo.detach()         # Terminate active pulse control to eliminate servo motor hum/shake
+            print(">> Trapdoor successfully closed and detached.")
         except Exception as e:
             print(f"Servo actuation error: {e}")
+        finally:
+            trapdoor_busy = False  # Re-enable model inference for subsequent bottles
 
 # ==========================================
 # 3. STATE & CONFIGURATION
 # ==========================================
 is_camera_active = False
+trapdoor_busy = False  # Flag to block frame detection calculations while servo moves
 detected_queue = []
 last_detection_time = 0
 COOLDOWN_SECONDS = 3.0  # Prevent scanning the same bottle multiple times per second
@@ -172,7 +183,7 @@ def system_status():
 # 5. OPENCV NATIVE GUI LOOP (Main Thread)
 # ==========================================
 def main_gui_loop():
-    global is_camera_active, detected_queue, last_detection_time
+    global is_camera_active, detected_queue, last_detection_time, trapdoor_busy
     cap = None
     window_name = "PET Bottle Scanner"
 
@@ -209,6 +220,23 @@ def main_gui_loop():
         # Get bin status once per frame to lock interactions if needed
         fill_pct, is_full = get_bin_status()
 
+        # -------------------------------------------------------------
+        # BYPASS LOOP: If trapdoor is actively moving, pause YOLOv8 
+        # inferences to prevent CPU spikes from jittering the servo.
+        # -------------------------------------------------------------
+        if trapdoor_busy:
+            # Draw overlay status banner informing the user of the process
+            cv2.rectangle(frame, (10, 15), (630, 85), (0, 0, 0), -1)
+            cv2.rectangle(frame, (10, 15), (630, 85), (0, 255, 0), 2)
+            cv2.putText(frame, "PROCESSING BOTTLE... PLEASE WAIT", (35, 57), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
+            cv2.imshow(window_name, frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            continue
+        # -------------------------------------------------------------
+
         results = model(frame, classes=[BOTTLE_CLASS_ID], verbose=False, imgsz=320)
         bottle_detected = False
 
@@ -237,7 +265,7 @@ def main_gui_loop():
 
                     current_time = time.time()
                     if (current_time - last_detection_time) > COOLDOWN_SECONDS:
-                        # NEW CHECK: Prevent accumulating points if the machine is full
+                        # Prevent accumulating points if the machine is full
                         if not is_full:
                             detected_queue.append({"size": size_cat, "points": points})
                             last_detection_time = current_time
