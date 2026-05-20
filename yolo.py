@@ -23,12 +23,12 @@ try:
     # Set physical limits to 0 to 180 degrees mapped to standard servo pulse bounds (0.5ms to 2.5ms).
     # This allows us to command precise angles inside the 180° range.
     servo = AngularServo(17, min_angle=0, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0025)
-    servo.angle = 0    # Default state: Flap Closed (0 degrees)
+    servo.angle = 0    # Default state: Acceptance Gate Closed (0 degrees)
     time.sleep(0.5)    # Allow the servo to reach position
     servo.detach()     # Cut control signal to stop idle jitter/humming!
-    print("✅ Hardware: Servo Motor Initialized. Flap is closed (0°) and detached.")
+    print("✅ Hardware: Servo Motor Initialized. Acceptance gate is closed (0°) and detached.")
 except Exception as e:
-    print("⚠️ WARNING: Servo init failed. Running without hardware flap.", e)
+    print("⚠️ WARNING: Servo init failed. Running without hardware acceptance gate.", e)
     servo = None
 
 # Initialize Ultrasonic Sensor (Bin Level)
@@ -63,45 +63,45 @@ def get_bin_status():
             return 0.0, False
     return 0.0, False
 
-def open_trapdoor():
-    """Opens the trapdoor by rotating to 90°, pauses for 2 seconds, then rotates back to 0°."""
-    global trapdoor_busy
+def open_acceptance_gate():
+    """Opens the acceptance gate by rotating to 90°, pauses for 4 seconds, then rotates back to 0°."""
+    global gate_busy
     fill_pct, is_full = get_bin_status()
     
     if is_full:
-        print(f">> Trapdoor aborted: BIN IS FULL! ({fill_pct}%)")
+        print(f">> Acceptance Gate aborted: BIN IS FULL! ({fill_pct}%)")
         return
         
     if servo:
         try:
-            trapdoor_busy = True  # Lock out frame detection calculations during movement
+            gate_busy = True  # Lock out frame detection calculations during gate active state
             
-            # Step 1: Rotate to 90 degrees (Midpoint of physical 180° capability)
-            print(">> Triggering Trapdoor: ROTATE TO 90° (OPEN)")
-            servo.angle = 90       # Re-engages pulse train automatically, moves to center 90°
-            time.sleep(1.5)        # Hold open for 1.5 seconds to let the bottle slip down
+            # Step 1: Rotate to 90 degrees (Open position to accept bottle)
+            print(">> Triggering Acceptance Gate: ROTATE TO 90° (OPEN)")
+            servo.angle = 90       # Re-engages pulse train automatically, moves to 90°
+            time.sleep(4.0)        # Keep acceptance gate open for exactly 4 seconds
             
             # Step 2: Rotate back to 0 degrees (Closed position)
-            print(">> Triggering Trapdoor: ROTATE TO 0° (CLOSE)")
+            print(">> Triggering Acceptance Gate: ROTATE TO 0° (CLOSE)")
             servo.angle = 0  
             time.sleep(0.8)        # Allow plenty of time to physically return and rest at 0°
             
             # Step 3: Stop active signal
             servo.detach()         # Terminate active pulse control to eliminate servo motor hum/shake
-            print(">> Trapdoor successfully closed and detached.")
+            print(">> Acceptance Gate successfully closed and detached.")
         except Exception as e:
             print(f"Servo actuation error: {e}")
         finally:
-            trapdoor_busy = False  # Re-enable model inference for subsequent bottles
+            gate_busy = False  # Re-enable model inference for subsequent bottles
 
 # ==========================================
 # 3. STATE & CONFIGURATION
 # ==========================================
 is_camera_active = False
-trapdoor_busy = False  # Flag to block frame detection calculations while servo moves
+gate_busy = False  # Flag to block frame detection calculations while acceptance gate moves
 detected_queue = []
 last_detection_time = 0
-COOLDOWN_SECONDS = 3.0  # Prevent scanning the same bottle multiple times per second
+COOLDOWN_SECONDS = 5.0  # Cooldown adjusted to match the 4-second acceptance duration + safety margin
 
 THRESHOLD_250ML_MAX = 180   
 THRESHOLD_500ML_MAX = 250   
@@ -183,7 +183,7 @@ def system_status():
 # 5. OPENCV NATIVE GUI LOOP (Main Thread)
 # ==========================================
 def main_gui_loop():
-    global is_camera_active, detected_queue, last_detection_time, trapdoor_busy
+    global is_camera_active, detected_queue, last_detection_time, gate_busy
     cap = None
     window_name = "PET Bottle Scanner"
 
@@ -221,14 +221,14 @@ def main_gui_loop():
         fill_pct, is_full = get_bin_status()
 
         # -------------------------------------------------------------
-        # BYPASS LOOP: If trapdoor is actively moving, pause YOLOv8 
+        # BYPASS LOOP: If acceptance gate is actively moving, pause YOLOv8 
         # inferences to prevent CPU spikes from jittering the servo.
         # -------------------------------------------------------------
-        if trapdoor_busy:
+        if gate_busy:
             # Draw overlay status banner informing the user of the process
             cv2.rectangle(frame, (10, 15), (630, 85), (0, 0, 0), -1)
             cv2.rectangle(frame, (10, 15), (630, 85), (0, 255, 0), 2)
-            cv2.putText(frame, "PROCESSING BOTTLE... PLEASE WAIT", (35, 57), 
+            cv2.putText(frame, "ACCEPTING BOTTLE... PLEASE WAIT", (35, 57), 
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             
             cv2.imshow(window_name, frame)
@@ -270,8 +270,8 @@ def main_gui_loop():
                             detected_queue.append({"size": size_cat, "points": points})
                             last_detection_time = current_time
                             
-                            # Trigger trapdoor asynchronously
-                            threading.Thread(target=open_trapdoor, daemon=True).start()
+                            # Trigger acceptance gate asynchronously
+                            threading.Thread(target=open_acceptance_gate, daemon=True).start()
                         else:
                             print(f"Skipping point allocation. Bin is full ({fill_pct}%).")
 
