@@ -19,11 +19,12 @@ BOTTLE_CLASS_ID = 39
 # ==========================================
 # 2. HARDWARE INITIALIZATION (Servo & Ultrasonic)
 # ==========================================
-# Initialize Servo (Trapdoor)
 try:
-    servo = AngularServo(17, min_angle=-180, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0024)
-    servo.angle = -180  # Default state: Flap Closed
-    print("✅ Hardware: Servo Motor Initialized. Flap is closed.")
+    servo = AngularServo(17, min_angle=-90, max_angle=90, min_pulse_width=0.0005, max_pulse_width=0.0024)
+    servo.angle = -90  # Default state: Flap Closed
+    time.sleep(0.5)    # Give it a brief moment to reach -90
+    servo.detach()     # <--- ADD THIS: Cut the signal immediately to stop idle shaking!
+    print("✅ Hardware: Servo Motor Initialized. Flap is closed and detached.")
 except Exception as e:
     print("⚠️ WARNING: Servo init failed. Running without hardware flap.", e)
     servo = None
@@ -64,7 +65,6 @@ def open_trapdoor():
     """Opens the trapdoor for 2 seconds to accept the bottle, but aborts if the bin is full."""
     fill_pct, is_full = get_bin_status()
     
-    # SAFETY LOCKOUT: Do not operate servo if the bin is overflowing
     if is_full:
         print(f">> Trapdoor aborted: BIN IS FULL! ({fill_pct}%)")
         return
@@ -72,10 +72,15 @@ def open_trapdoor():
     if servo:
         try:
             print(">> Triggering Trapdoor: OPEN")
-            servo.angle = 180   # Rotate to open the flap
-            time.sleep(2.0)     # Keep open for 2 seconds to let bottle drop
+            servo.angle = 90   # Re-engages automatically when angle is set
+            time.sleep(2.0)     
+            
             print(">> Triggering Trapdoor: CLOSE")
-            servo.angle = -180  # Return to closed state
+            servo.angle = -90  
+            time.sleep(0.6)    # Give it plenty of time to physically close completely
+            
+            servo.detach()     # <--- ADD THIS: Kill the jitter signal until the next bottle drops!
+            print(">> Trapdoor parked and detached.")
         except Exception as e:
             print(f"Servo actuation error: {e}")
 
