@@ -75,37 +75,6 @@ def get_bin_status():
             return 0.0, False
     return 0.0, False
 
-def open_acceptance_gate():
-    """Opens the acceptance gate by rotating to 90°, pauses for 4 seconds, then returns to 0°."""
-    global gate_busy
-    fill_pct, is_full = get_bin_status()
-    
-    if is_full:
-        print(f">> Acceptance Gate aborted: BIN IS FULL! ({fill_pct}%)")
-        return
-        
-    if servo_accept:
-        try:
-            gate_busy = True  # Lock out frame detection calculations during gate active state
-            
-            # Step 1: Rotate to 90 degrees (Open position to accept valid PET bottle)
-            print(">> Triggering Acceptance Gate (GPIO 17): ROTATE TO 90° (OPEN)")
-            servo_accept.angle = 90       # Re-engages pulse train automatically
-            time.sleep(4.0)               # Keep acceptance gate open for exactly 4 seconds
-            
-            # Step 2: Rotate back to 0 degrees (Closed position for invalid/idle items)
-            print(">> Triggering Acceptance Gate (GPIO 17): ROTATE TO 0° (CLOSE)")
-            servo_accept.angle = 0  
-            time.sleep(0.8)               # Allow plenty of time to physically return and rest at 0°
-            
-            # Step 3: Stop active signal
-            servo_accept.detach()         # Terminate active pulse control to eliminate servo motor hum/shake
-            print(">> Acceptance Gate successfully closed and detached.")
-        except Exception as e:
-            print(f"Servo 1 actuation error: {e}")
-        finally:
-            gate_busy = False  # Re-enable model inference for subsequent bottles
-
 def set_closing_gate(is_open):
     """Controls the secondary Closing Gate (GPIO 18)"""
     if servo_close:
@@ -113,14 +82,58 @@ def set_closing_gate(is_open):
             if is_open:
                 print(">> Triggering Closing Gate (GPIO 18): ROTATE TO 90° (OPEN)")
                 servo_close.angle = 90
+                time.sleep(0.8)
             else:
-                print(">> Triggering Closing Gate (GPIO 18): ROTATE TO 0° (CLOSE)")
-                servo_close.angle = 0
+                print(">> Triggering Closing Gate (GPIO 18): ROTATE 90° -> 0° smoothly (CLOSE)")
+                # Close the gate gradually in a loop from 90 down to 0 degrees
+                for angle in range(90, -1, -2):
+                    servo_close.angle = angle
+                    time.sleep(0.02)
+                servo_close.angle = 0 # Ensure it rests exactly at 0
+                time.sleep(0.2)
             
-            time.sleep(0.8)
             servo_close.detach()
         except Exception as e:
             print(f"Servo 2 actuation error: {e}")
+
+def process_bottle_sequence():
+    """Orchestrates closing the outer gate smoothly, processing the bottle, and reopening."""
+    global gate_busy
+    fill_pct, is_full = get_bin_status()
+    
+    if is_full:
+        print(f">> Sequence aborted: BIN IS FULL! ({fill_pct}%)")
+        return
+        
+    try:
+        gate_busy = True  # Lock out frame detection calculations during sequence
+        
+        # Step 1: Smoothly close the outer Closing Gate (GPIO 18)
+        set_closing_gate(is_open=False)
+        
+        # Step 2: Process the bottle (Open Acceptance Gate GPIO 17)
+        if servo_accept:
+            print(">> Triggering Acceptance Gate (GPIO 17): ROTATE TO 90° (OPEN)")
+            servo_accept.angle = 90       # Re-engages pulse train automatically
+            time.sleep(4.0)               # Keep acceptance gate open for exactly 4 seconds
+            
+            print(">> Triggering Acceptance Gate (GPIO 17): ROTATE TO 0° (CLOSE)")
+            servo_accept.angle = 0  
+            time.sleep(0.8)               # Allow plenty of time to physically return and rest at 0°
+            
+            servo_accept.detach()         # Terminate active pulse control
+            print(">> Acceptance Gate successfully closed and detached.")
+        else:
+            time.sleep(4.8)               # Simulate wait time if hardware disconnected
+            
+        # Step 3: Re-open the outer Closing Gate (GPIO 18) for the next bottle
+        if is_camera_active:
+            set_closing_gate(is_open=True)
+            
+    except Exception as e:
+        print(f"Gate sequencing error: {e}")
+    finally:
+        gate_busy = False  # Re-enable model inference for subsequent bottles
 
 # ==========================================
 # 3. STATE & CONFIGURATION
@@ -305,11 +318,8 @@ def main_gui_loop():
                             detected_queue.append({"size": size_cat, "points": points})
                             last_detection_time = current_time
                             
-                            # Enforce the closing gate to 90 degrees actively upon PET detection
-                            threading.Thread(target=set_closing_gate, args=(True,), daemon=True).start()
-
-                            # Trigger acceptance gate asynchronously
-                            threading.Thread(target=open_acceptance_gate, daemon=True).start()
+                            # Start the sequence: Close outer gate -> Process bottle -> Re-open outer gate
+                            threading.Thread(target=process_bottle_sequence, daemon=True).start()
                         else:
                             print(f"Skipping point allocation. Bin is full ({fill_pct}%).")
 
