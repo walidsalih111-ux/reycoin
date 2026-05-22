@@ -17,21 +17,33 @@ model = YOLO('yolov8n.pt')
 BOTTLE_CLASS_ID = 39 
 
 # ==========================================
-# 2. HARDWARE INITIALIZATION (Servo & Ultrasonic)
+# 2. HARDWARE INITIALIZATION (Servos & Ultrasonic)
 # ==========================================
-try:
-    # Set physical limits to 0 to 180 degrees mapped to standard servo pulse bounds (0.5ms to 2.5ms).
-    # This allows us to command precise angles inside the 180° range.
-    servo = AngularServo(17, min_angle=0, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0025)
-    servo.angle = 0    # Default state: Acceptance Gate Closed (0 degrees)
-    time.sleep(0.5)    # Allow the servo to reach position
-    servo.detach()     # Cut control signal to stop idle jitter/humming!
-    print("✅ Hardware: Servo Motor Initialized. Acceptance gate is closed (0°) and detached.")
-except Exception as e:
-    print("⚠️ WARNING: Servo init failed. Running without hardware acceptance gate.", e)
-    servo = None
 
-# Initialize Ultrasonic Sensor (Bin Level)
+# A. Acceptance Gate (GPIO 17)
+try:
+    # Set physical limits to 0 to 180 degrees mapped to standard servo pulse bounds.
+    servo_accept = AngularServo(17, min_angle=0, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0025)
+    servo_accept.angle = 0    # Default state: Acceptance Gate Closed (0 degrees) for invalid items & idle
+    time.sleep(0.5)           # Allow the servo to reach position
+    servo_accept.detach()     # Cut control signal to stop idle jitter/humming
+    print("✅ Hardware: Acceptance Gate (GPIO 17) Initialized. Default closed (0°).")
+except Exception as e:
+    print("⚠️ WARNING: Acceptance Gate init failed. Running without hardware acceptance gate.", e)
+    servo_accept = None
+
+# B. Closing Gate (GPIO 18)
+try:
+    servo_close = AngularServo(18, min_angle=0, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0025)
+    servo_close.angle = 0     # Default state: Closing Gate Closed (0 degrees)
+    time.sleep(0.5)           # Allow the servo to reach position
+    servo_close.detach()      # Cut control signal to stop idle jitter/humming
+    print("✅ Hardware: Closing Gate (GPIO 18) Initialized. Default closed (0°).")
+except Exception as e:
+    print("⚠️ WARNING: Closing Gate init failed.", e)
+    servo_close = None
+
+# C. Initialize Ultrasonic Sensor (Bin Level)
 try:
     sensor = DistanceSensor(echo=24, trigger=23)
     print("✅ Hardware: Ultrasonic Sensor Initialized.")
@@ -64,7 +76,7 @@ def get_bin_status():
     return 0.0, False
 
 def open_acceptance_gate():
-    """Opens the acceptance gate by rotating to 90°, pauses for 4 seconds, then rotates back to 0°."""
+    """Opens the acceptance gate by rotating to 90°, pauses for 4 seconds, then returns to 0°."""
     global gate_busy
     fill_pct, is_full = get_bin_status()
     
@@ -72,27 +84,43 @@ def open_acceptance_gate():
         print(f">> Acceptance Gate aborted: BIN IS FULL! ({fill_pct}%)")
         return
         
-    if servo:
+    if servo_accept:
         try:
             gate_busy = True  # Lock out frame detection calculations during gate active state
             
-            # Step 1: Rotate to 90 degrees (Open position to accept bottle)
-            print(">> Triggering Acceptance Gate: ROTATE TO 90° (OPEN)")
-            servo.angle = 90       # Re-engages pulse train automatically, moves to 90°
-            time.sleep(4.0)        # Keep acceptance gate open for exactly 4 seconds
+            # Step 1: Rotate to 90 degrees (Open position to accept valid PET bottle)
+            print(">> Triggering Acceptance Gate (GPIO 17): ROTATE TO 90° (OPEN)")
+            servo_accept.angle = 90       # Re-engages pulse train automatically
+            time.sleep(4.0)               # Keep acceptance gate open for exactly 4 seconds
             
-            # Step 2: Rotate back to 0 degrees (Closed position)
-            print(">> Triggering Acceptance Gate: ROTATE TO 0° (CLOSE)")
-            servo.angle = 0  
-            time.sleep(0.8)        # Allow plenty of time to physically return and rest at 0°
+            # Step 2: Rotate back to 0 degrees (Closed position for invalid/idle items)
+            print(">> Triggering Acceptance Gate (GPIO 17): ROTATE TO 0° (CLOSE)")
+            servo_accept.angle = 0  
+            time.sleep(0.8)               # Allow plenty of time to physically return and rest at 0°
             
             # Step 3: Stop active signal
-            servo.detach()         # Terminate active pulse control to eliminate servo motor hum/shake
+            servo_accept.detach()         # Terminate active pulse control to eliminate servo motor hum/shake
             print(">> Acceptance Gate successfully closed and detached.")
         except Exception as e:
-            print(f"Servo actuation error: {e}")
+            print(f"Servo 1 actuation error: {e}")
         finally:
             gate_busy = False  # Re-enable model inference for subsequent bottles
+
+def set_closing_gate(is_open):
+    """Controls the secondary Closing Gate (GPIO 18)"""
+    if servo_close:
+        try:
+            if is_open:
+                print(">> Triggering Closing Gate (GPIO 18): ROTATE TO 90° (OPEN)")
+                servo_close.angle = 90
+            else:
+                print(">> Triggering Closing Gate (GPIO 18): ROTATE TO 0° (CLOSE)")
+                servo_close.angle = 0
+            
+            time.sleep(0.8)
+            servo_close.detach()
+        except Exception as e:
+            print(f"Servo 2 actuation error: {e}")
 
 # ==========================================
 # 3. STATE & CONFIGURATION
@@ -157,12 +185,20 @@ def is_bottle_upright(roi):
 def start_camera():
     global is_camera_active
     is_camera_active = True
+    
+    # Open the closing gate to 90° when "Insert Bottle" button is pressed
+    threading.Thread(target=set_closing_gate, args=(True,), daemon=True).start()
+    
     return jsonify({"status": "started"})
 
 @app.route('/stop')
 def stop_camera():
     global is_camera_active
     is_camera_active = False
+    
+    # Return the closing gate to 0° when the session is over
+    threading.Thread(target=set_closing_gate, args=(False,), daemon=True).start()
+    
     return jsonify({"status": "stopped"})
 
 @app.route('/poll')
@@ -225,7 +261,6 @@ def main_gui_loop():
         # inferences to prevent CPU spikes from jittering the servo.
         # -------------------------------------------------------------
         if gate_busy:
-            # Draw overlay status banner informing the user of the process
             cv2.rectangle(frame, (10, 15), (630, 85), (0, 0, 0), -1)
             cv2.rectangle(frame, (10, 15), (630, 85), (0, 255, 0), 2)
             cv2.putText(frame, "ACCEPTING BOTTLE... PLEASE WAIT", (35, 57), 
@@ -270,6 +305,9 @@ def main_gui_loop():
                             detected_queue.append({"size": size_cat, "points": points})
                             last_detection_time = current_time
                             
+                            # Enforce the closing gate to 90 degrees actively upon PET detection
+                            threading.Thread(target=set_closing_gate, args=(True,), daemon=True).start()
+
                             # Trigger acceptance gate asynchronously
                             threading.Thread(target=open_acceptance_gate, daemon=True).start()
                         else:
