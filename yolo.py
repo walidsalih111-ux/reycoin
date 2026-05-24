@@ -5,7 +5,7 @@ import numpy as np
 from flask import Flask, jsonify
 from flask_cors import CORS # type: ignore
 from ultralytics import YOLO # type: ignore
-from gpiozero import AngularServo, DistanceSensor # ---> Hardware Control
+from gpiozero import Servo, DigitalInputDevice, DistanceSensor # ---> Integrated Hardware Control
 
 # ==========================================
 # 1. INITIALIZE FLASK & YOLO MODEL
@@ -17,33 +17,41 @@ model = YOLO('yolov8n.pt')
 BOTTLE_CLASS_ID = 39 
 
 # ==========================================
-# 2. HARDWARE INITIALIZATION (Servos & Ultrasonic)
+# 2. HARDWARE INITIALIZATION (Servos, IR, & Ultrasonic)
 # ==========================================
 
-# A. Acceptance Gate (GPIO 17)
-try:
-    # Set physical limits to 0 to 180 degrees mapped to standard servo pulse bounds.
-    servo_accept = AngularServo(17, min_angle=0, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0025)
-    servo_accept.angle = 0    # Default state: Acceptance Gate Closed (0 degrees) for invalid items & idle
-    time.sleep(0.5)           # Allow the servo to reach position
-    servo_accept.detach()     # Cut control signal to stop idle jitter/humming
-    print("✅ Hardware: Acceptance Gate (GPIO 17) Initialized. Default closed (0°).")
-except Exception as e:
-    print("⚠️ WARNING: Acceptance Gate init failed. Running without hardware acceptance gate.", e)
-    servo_accept = None
+# A. Double Acceptance Gate Servos (GPIO 17 & 18)
+# Safely adjusted pulse widths to prevent physical limits stalling, grinding, and buzzing.
+MIN_PULSE = 0.0006  # 0.6 ms
+MAX_PULSE = 0.0023  # 2.3 ms
 
-# B. Closing Gate (GPIO 18)
 try:
-    servo_close = AngularServo(18, min_angle=0, max_angle=180, min_pulse_width=0.0005, max_pulse_width=0.0025)
-    servo_close.angle = 0     # Default state: Closing Gate Closed (0 degrees)
-    time.sleep(0.5)           # Allow the servo to reach position
-    servo_close.detach()      # Cut control signal to stop idle jitter/humming
-    print("✅ Hardware: Closing Gate (GPIO 18) Initialized. Default closed (0°).")
+    servo1 = Servo(17, min_pulse_width=MIN_PULSE, max_pulse_width=MAX_PULSE)
+    servo2 = Servo(18, min_pulse_width=MIN_PULSE, max_pulse_width=MAX_PULSE)
+    
+    # Default State: Acceptance Gate Closed (90 degrees). 
+    # Translating to gpiozero range (-1.0 to 1.0): (90.0 / 90.0) - 1.0 = 0.0
+    servo1.value = 0.0
+    servo2.value = 0.0
+    time.sleep(0.5)
+    servo1.detach()     # Cut control signal to stop idle jitter/humming
+    servo2.detach()
+    print("✅ Hardware: Servos (GPIO 17 & 18) Initialized. Default closed (90°).")
 except Exception as e:
-    print("⚠️ WARNING: Closing Gate init failed.", e)
-    servo_close = None
+    print("⚠️ WARNING: Servos initialization failed. Running without hardware servos.", e)
+    servo1 = None
+    servo2 = None
 
-# C. Initialize Ultrasonic Sensor (Bin Level)
+# B. Closing Gate IR Safety Sensor (GPIO 4)
+try:
+    # Most common IR obstacle modules use an 'active-low' configuration (0 when blocked, 1 when clear)
+    ir_sensor = DigitalInputDevice(4, pull_up=True)
+    print("✅ Hardware: IR Sensor (GPIO 4) Initialized. Default pulled-up.")
+except Exception as e:
+    print("⚠️ WARNING: IR Safety Sensor initialization failed. Running without safety sensor.", e)
+    ir_sensor = None
+
+# C. Initialize Ultrasonic Sensor (Bin Level on GPIO 23 & 24)
 try:
     sensor = DistanceSensor(echo=24, trigger=23)
     print("✅ Hardware: Ultrasonic Sensor Initialized.")
@@ -55,13 +63,18 @@ except Exception as e:
 BIN_HEIGHT_CM = 106.68 # 3.5 ft total height
 MAX_FILL_CM = 15.0     # Clearance from top sensor to be considered 100% full
 
+# Smooth sweep configurations (aligned with 50Hz refresh rate)
+SWEEP_TIME = 1.0       # Rotation duration in seconds
+STEP_DELAY = 0.045     # 45ms delay per step (prevents jitter)
+TARGET_ANGLE = 90.0    # Closing angle limit
+TOTAL_STEPS = int(SWEEP_TIME / STEP_DELAY)  # ~22 steps for a 1.0s transition
+STEP_SIZE = TARGET_ANGLE / TOTAL_STEPS      # ~4.09 degrees per step
+
 def get_bin_status():
     """Calculates the fill percentage based on ultrasonic distance reading."""
     if sensor:
         try:
-            # sensor.distance returns meters, multiply by 100 for cm
             dist_cm = sensor.distance * 100
-            
             current_fill_height = BIN_HEIGHT_CM - dist_cm
             usable_height = BIN_HEIGHT_CM - MAX_FILL_CM
             
@@ -75,30 +88,29 @@ def get_bin_status():
             return 0.0, False
     return 0.0, False
 
-def set_closing_gate(is_open):
-    """Controls the secondary Closing Gate (GPIO 18)"""
-    if servo_close:
+def initialize_servos_to_closed():
+    """Returns both servos to their default 90° (closed) resting positions safely."""
+    if servo1 and servo2:
         try:
-            if is_open:
-                print(">> Triggering Closing Gate (GPIO 18): ROTATE TO 90° (OPEN)")
-                servo_close.angle = 90
-                time.sleep(0.8)
-            else:
-                print(">> Triggering Closing Gate (GPIO 18): ROTATE 90° -> 0° smoothly (CLOSE)")
-                # Close the gate gradually in a loop from 90 down to 0 degrees
-                for angle in range(90, -1, -2):
-                    servo_close.angle = angle
-                    time.sleep(0.02)
-                servo_close.angle = 0 # Ensure it rests exactly at 0
-                time.sleep(0.2)
-            
-            servo_close.detach()
+            print(">> Securing default/resting position: both servos at 90° (Closed)")
+            servo1.value = 0.0
+            servo2.value = 0.0
+            time.sleep(0.5)
+            servo1.detach()
+            servo2.detach()
         except Exception as e:
-            print(f"Servo 2 actuation error: {e}")
+            print(f"Servo resting sequence error: {e}")
 
-def process_bottle_sequence():
-    """Orchestrates closing the outer gate smoothly, processing the bottle, and reopening."""
-    global gate_busy
+def process_bottle_sequence(size_cat, points):
+    """
+    Orchestrates the safety-guarded acceptance loop:
+    1. Checks if the IR safety sensor is blocked (hand in the chute).
+    2. Waits for safety clearance.
+    3. Allocates points & updates queue once cleared.
+    4. Smoothly sweeps both servos from 90° to 0° (OPEN).
+    5. Holds open for 4 seconds, then smoothly sweeps back from 0° to 90° (CLOSE).
+    """
+    global gate_busy, detected_queue
     fill_pct, is_full = get_bin_status()
     
     if is_full:
@@ -108,27 +120,48 @@ def process_bottle_sequence():
     try:
         gate_busy = True  # Lock out frame detection calculations during sequence
         
-        # Step 1: Smoothly close the outer Closing Gate (GPIO 18)
-        set_closing_gate(is_open=False)
-        
-        # Step 2: Process the bottle (Open Acceptance Gate GPIO 17)
-        if servo_accept:
-            print(">> Triggering Acceptance Gate (GPIO 17): ROTATE TO 90° (OPEN)")
-            servo_accept.angle = 90       # Re-engages pulse train automatically
+        # --- STEP 1: SAFETY FIRST (IR HAND DETECTION) ---
+        if ir_sensor:
+            print(">> Checking Chute: Waiting for resident's hand to clear...")
+            while ir_sensor.value == 0:
+                print("[ OBJECT DETECTED ] ---> Resident's hand is inside the chute! Holding gates closed.")
+                time.sleep(0.1)  # Poll snappy but without overloading CPU
+            print("[ BEAM CLEAR ] ---> Chute is safe. Initiating acceptance process...")
+
+        # --- STEP 2: ALLOCATE BOTTLE POINTS ---
+        detected_queue.append({"size": size_cat, "points": points})
+        print(f">> Points Allocated: +{points} pts for {size_cat} PET bottle.")
+
+        # --- STEP 3: SMOOTH SYNCHRONIZED SWEEP (OPEN GATE: 90° -> 0°) ---
+        if servo1 and servo2:
+            print(">> Actuating Gates: Rotating servos 90° -> 0° smoothly (OPEN)")
+            for step in range(TOTAL_STEPS + 1):
+                angle = TARGET_ANGLE - (step * STEP_SIZE) # Sweep down to 0 degrees
+                servo_value = (angle / 90.0) - 1.0        # Map to gpiozero's -1.0 to 1.0 bounds
+                servo1.value = servo_value
+                servo2.value = servo_value
+                time.sleep(STEP_DELAY)
+                
+            print(">> Gates open. Holding for 4.0 seconds for item slide-down...")
             time.sleep(4.0)               # Keep acceptance gate open for exactly 4 seconds
             
-            print(">> Triggering Acceptance Gate (GPIO 17): ROTATE TO 0° (CLOSE)")
-            servo_accept.angle = 0  
-            time.sleep(0.8)               # Allow plenty of time to physically return and rest at 0°
-            
-            servo_accept.detach()         # Terminate active pulse control
-            print(">> Acceptance Gate successfully closed and detached.")
+            # --- STEP 4: SMOOTH SYNCHRONIZED SWEEP (CLOSE GATE: 0° -> 90°) ---
+            print(">> Actuating Gates: Rotating servos 0° -> 90° smoothly (CLOSE)")
+            for step in range(TOTAL_STEPS + 1):
+                angle = step * STEP_SIZE                  # Sweep up to 90 degrees
+                servo_value = (angle / 90.0) - 1.0
+                servo1.value = servo_value
+                servo2.value = servo_value
+                time.sleep(STEP_DELAY)
+                
+            # Detach to kill the holding current to stop hums and extend the motor life span
+            servo1.detach()
+            servo2.detach()
+            print(">> Gates successfully closed and powered down.")
         else:
-            time.sleep(4.8)               # Simulate wait time if hardware disconnected
-            
-        # Step 3: Re-open the outer Closing Gate (GPIO 18) for the next bottle
-        if is_camera_active:
-            set_closing_gate(is_open=True)
+            # Simulation mode wait
+            print(">> [SIMULATOR] Simulating 5.0 seconds gate hold...")
+            time.sleep(5.0)
             
     except Exception as e:
         print(f"Gate sequencing error: {e}")
@@ -142,14 +175,14 @@ is_camera_active = False
 gate_busy = False  # Flag to block frame detection calculations while acceptance gate moves
 detected_queue = []
 last_detection_time = 0
-COOLDOWN_SECONDS = 5.0  # Cooldown adjusted to match the 4-second acceptance duration + safety margin
+COOLDOWN_SECONDS = 5.0  # Cooldown adjusted to match active processing bounds
 
 THRESHOLD_250ML_MAX = 180   
 THRESHOLD_500ML_MAX = 250   
 THRESHOLD_1000ML_MAX = 380  
 
 def estimate_size_and_points(width, height):
-    """Returns size label and corresponding points"""
+    """Returns size label and corresponding points based on bounding box dimension mapping"""
     longest_side = max(width, height)
     
     if longest_side <= THRESHOLD_250ML_MAX:
@@ -199,9 +232,8 @@ def start_camera():
     global is_camera_active
     is_camera_active = True
     
-    # Open the closing gate to 90° when "Insert Bottle" button is pressed
-    threading.Thread(target=set_closing_gate, args=(True,), daemon=True).start()
-    
+    # Secure and ensure both servos are set at 90° (closed) resting positions on launch
+    threading.Thread(target=initialize_servos_to_closed, daemon=True).start()
     return jsonify({"status": "started"})
 
 @app.route('/stop')
@@ -209,9 +241,8 @@ def stop_camera():
     global is_camera_active
     is_camera_active = False
     
-    # Return the closing gate to 0° when the session is over
-    threading.Thread(target=set_closing_gate, args=(False,), daemon=True).start()
-    
+    # Return both servos back to 90° (closed) resting positions when the session terminates
+    threading.Thread(target=initialize_servos_to_closed, daemon=True).start()
     return jsonify({"status": "stopped"})
 
 @app.route('/poll')
@@ -266,7 +297,6 @@ def main_gui_loop():
             time.sleep(0.1)
             continue
 
-        # Get bin status once per frame to lock interactions if needed
         fill_pct, is_full = get_bin_status()
 
         # -------------------------------------------------------------
@@ -276,8 +306,14 @@ def main_gui_loop():
         if gate_busy:
             cv2.rectangle(frame, (10, 15), (630, 85), (0, 0, 0), -1)
             cv2.rectangle(frame, (10, 15), (630, 85), (0, 255, 0), 2)
-            cv2.putText(frame, "ACCEPTING BOTTLE... PLEASE WAIT", (35, 57), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
+            # Show a specialized safety message if hand triggers sensor
+            if ir_sensor and ir_sensor.value == 0:
+                cv2.putText(frame, "PLEASE REMOVE HAND FROM CHUTE!", (35, 57), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            else:
+                cv2.putText(frame, "ACCEPTING BOTTLE... PLEASE WAIT", (35, 57), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             
             cv2.imshow(window_name, frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -315,11 +351,14 @@ def main_gui_loop():
                     if (current_time - last_detection_time) > COOLDOWN_SECONDS:
                         # Prevent accumulating points if the machine is full
                         if not is_full:
-                            detected_queue.append({"size": size_cat, "points": points})
                             last_detection_time = current_time
                             
-                            # Start the sequence: Close outer gate -> Process bottle -> Re-open outer gate
-                            threading.Thread(target=process_bottle_sequence, daemon=True).start()
+                            # Start the sequence: Safety checks -> Points Allocation -> Gate Sweeps
+                            threading.Thread(
+                                target=process_bottle_sequence, 
+                                args=(size_cat, points), 
+                                daemon=True
+                            ).start()
                         else:
                             print(f"Skipping point allocation. Bin is full ({fill_pct}%).")
 
