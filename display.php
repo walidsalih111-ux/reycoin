@@ -1,0 +1,264 @@
+<?php
+require 'config.php';
+
+// --- AJAX POLLING BACKEND ---
+if (isset($_GET['ajax'])) {
+    header('Content-Type: application/json');
+    
+    $active_user = null;
+    $now = time();
+
+    $lock_stmt = $pdo->query("SELECT user_qr FROM system_lock WHERE id = 1 AND expires_at > $now");
+    $lock = $lock_stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($lock && $lock['user_qr']) {
+        // Exclude localhost users even if they somehow acquired a lock
+        $usr_stmt = $pdo->prepare("SELECT * FROM users WHERE qr_code = ? AND ip_address NOT IN ('127.0.0.1', '::1')");
+        $usr_stmt->execute([$lock['user_qr']]);
+        $active_user = $usr_stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // 2. If no active lock, find the first connected user via Hotspot Ping
+    if (!$active_user) {
+        // Exclude localhost IP addresses from the fetch
+        $stmt = $pdo->query("SELECT * FROM users WHERE ip_address NOT IN ('127.0.0.1', '::1') ORDER BY GREATEST(IFNULL(updated_at, '2000-01-01'), created_at) DESC LIMIT 10");
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($users as $u) {
+            $ip = $u['ip_address'];
+            
+            // Safe ping execution
+            if (function_exists('exec')) {
+                $disabled = explode(',', ini_get('disable_functions'));
+                if (!in_array('exec', array_map('trim', $disabled))) {
+                    // Check OS to format ping command correctly (Linux/Pi vs Windows)
+                    $ping_cmd = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') 
+                        ? "ping -n 1 -w 1000 " 
+                        : "ping -c 1 -W 1 ";
+                        
+                    exec($ping_cmd . escapeshellarg($ip) . " > /dev/null 2>&1", $output, $status);
+                    
+                    if ($status === 0) {
+                        $active_user = $u;
+                        break; // Found the active connected user!
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Last resort fallback: Show the latest user if they interacted within the last 60 seconds (excluding localhost)
+    if (!$active_user) {
+        $fallback_stmt = $pdo->query("SELECT * FROM users WHERE ip_address NOT IN ('127.0.0.1', '::1') AND updated_at >= NOW() - INTERVAL 1 MINUTE ORDER BY updated_at DESC LIMIT 1");
+        $active_user = $fallback_stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Fetch Bin Status from hardware endpoint
+    $bin_status = ['fill_percent' => 0, 'is_full' => false];
+    $ctx = stream_context_create(['http' => ['timeout' => 1]]);
+    $bin_res = @file_get_contents('http://127.0.0.1:5000/status', false, $ctx);
+    if ($bin_res) {
+        $parsed = json_decode($bin_res, true);
+        if ($parsed && isset($parsed['fill_percent'])) {
+            $bin_status = $parsed;
+        }
+    }
+
+    if ($active_user) {
+        echo json_encode(['status' => 'success', 'user' => $active_user, 'bin' => $bin_status]);
+    } else {
+        echo json_encode(['status' => 'empty', 'bin' => $bin_status]);
+    }
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RECYCOIN - Display</title>
+    <script src="functions/tailwind.js"></script>
+    <link href="functions/font.css" rel="stylesheet">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
+    <style>
+        :root {
+            --g900: #042c1e; --g800: #0a5c46; --g700: #0F6E56; --g400: #5DCAA5;
+        }
+        body { 
+            font-family: 'DM Sans', sans-serif; 
+            background-color: var(--g900); 
+            color: white; 
+            margin: 0; 
+            overflow: hidden; 
+            height: 100vh;
+            background-image: radial-gradient(circle at 50% -20%, #0a5c46 0%, #042c1e 60%);
+        }
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            display: none; 
+        }
+        .screen.active {
+            display: flex; 
+        }
+        .points-display {
+            font-size: 8rem;
+            line-height: 1;
+            font-weight: 900;
+            color: var(--g400);
+            text-shadow: 0 10px 30px rgba(93, 202, 165, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+<!-- IDLE SCREEN (No User Connected) -->
+<div id="idle-screen" class="screen active text-center">
+    <h1 class="text-6xl font-black mb-4">Welcome to RECYCOIN</h1>
+    <p class="text-3xl text-green-200 mb-12">Scan to connect to our hotspot and start recycling.</p>
+    
+    <div class="bg-white p-8 rounded-[40px] shadow-[0_0_80px_rgba(93,202,165,0.15)] inline-block">
+        <img src="assets/wifiqr.jpg" onerror="this.src='wifiqr.jpg'" alt="Wi-Fi QR Code" class="w-80 h-80 mx-auto">
+    </div>
+    
+    <div class="mt-12 bg-black/20 backdrop-blur-sm px-8 py-4 rounded-full border border-white/10 shadow-inner">
+        <p class="text-2xl text-green-400 font-mono tracking-widest font-bold">WIFI: <span class="text-white">RECYCOIN</span></p>
+    </div>
+</div>
+
+<!-- USER SCREEN (Active Connection) -->
+<div id="user-screen" class="screen w-full max-w-6xl px-12">
+    <div class="flex items-center justify-between gap-8 mb-8 w-full">
+        <div class="flex-1 min-w-0">
+            <p class="text-2xl text-green-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-3">
+                <span class="inline-block rounded-full h-4 w-4 bg-green-500"></span>
+                Connected
+            </p>
+            <h1 class="text-6xl font-black text-white truncate max-w-4xl" id="display-name">---</h1>
+        </div>
+        
+        <!-- NEW STYLE: Header Badge & Portal QR Code -->
+        <div class="flex items-center gap-4 shrink-0">
+            <!-- Redesigned Bin Level Badge -->
+            <div class="bg-black/20 px-6 py-4 rounded-[32px] border border-white/10 text-center flex flex-col justify-center shadow-2xl h-full backdrop-blur-md">
+                <p class="text-sm text-green-200 uppercase tracking-widest mb-1 opacity-80">Bin Level</p>
+                <p class="text-3xl font-bold text-white transition-colors duration-300" id="display-bin-text">--%</p>
+            </div>
+            
+            <!-- Portal QR Instructions -->
+            <div class="flex items-center gap-5 bg-black/20 backdrop-blur-md p-4 rounded-[32px] border border-white/10 shadow-2xl">
+                <div class="text-right">
+                    <p class="text-lg font-bold text-green-400 uppercase tracking-widest mb-1">Resident Portal</p>
+                    <p class="text-sm text-green-100 mb-2">Scan to track points</p>
+                    <p class="text-xs font-mono text-white/70 bg-black/40 py-1.5 px-3 rounded-full inline-block tracking-widest border border-white/5">
+                        10.0.0.1
+                    </p>
+                </div>
+                <div class="bg-white p-3 rounded-2xl shadow-inner">
+                    <img src="assets/qr.png" alt="Portal Link QR" class="w-28 h-28 object-contain">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- WARNING MESSAGE BANNER (Hidden by default) -->
+    <div id="display-bin-warning" class="hidden w-full mb-8 bg-red-500/20 border border-red-500/50 text-red-200 p-6 rounded-[24px] text-center font-bold text-2xl animate-pulse shadow-md relative overflow-hidden">
+        <div class="absolute inset-0 bg-red-500/10 blur-xl pointer-events-none"></div>
+        <span class="relative z-10 flex items-center justify-center gap-4">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            RVM BIN IS FULL! MACHINE IS DISABLED. PLEASE EMPTY.
+        </span>
+    </div>
+
+    <div class="grid grid-cols-5 gap-8 w-full">
+        <div class="col-span-3 bg-white/5 backdrop-blur-xl rounded-[40px] p-12 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col justify-center">
+            <div class="absolute -right-20 -top-20 w-64 h-64 bg-green-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <p class="text-2xl text-green-200 font-medium mb-6 relative z-10">Total Points Balance</p>
+            <div class="points-display relative z-10" id="display-points">0.00</div>
+        </div>
+        
+        <div class="col-span-2 bg-white/5 backdrop-blur-xl rounded-[40px] p-12 border border-white/10 shadow-2xl flex flex-col justify-center">
+            <p class="text-2xl text-green-200 font-medium mb-6">Resident ID Code</p>
+            <div class="bg-black/40 py-6 px-8 rounded-3xl border border-white/5 shadow-inner">
+                <p class="text-4xl font-mono text-green-400 font-bold tracking-widest text-center" id="display-qr">RC-----</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUserId = null;
+
+    // Data Polling Logic
+    async function pollStatus() {
+        try {
+            let res = await fetch('display.php?ajax=1');
+            let json = await res.json();
+            
+            // --- UPDATE BIN STATUS UI ---
+            if (json.bin) {
+                let txt = document.getElementById('display-bin-text');
+                let warn = document.getElementById('display-bin-warning');
+                
+                if (txt && warn) {
+                    txt.innerText = json.bin.fill_percent + '%';
+                    
+                    // Text Color Logic Matching Personnel.php
+                    if (json.bin.fill_percent >= 90) {
+                        txt.className = 'text-3xl font-bold transition-colors duration-300 text-red-400 shadow-red-500/20';
+                    } else if (json.bin.fill_percent >= 60) {
+                        txt.className = 'text-3xl font-bold transition-colors duration-300 text-yellow-400 shadow-yellow-500/20';
+                    } else {
+                        txt.className = 'text-3xl font-bold transition-colors duration-300 text-white';
+                    }
+
+                    // Display warning lockout banner if 95% threshold reached
+                    if (json.bin.is_full) {
+                        warn.classList.remove('hidden');
+                    } else {
+                        warn.classList.add('hidden');
+                    }
+                }
+            }
+
+            if (json.status === 'success' && json.user) {
+                let u = json.user;
+                
+                // Populate UI Data
+                document.getElementById('display-name').innerText = u.full_name;
+                document.getElementById('display-points').innerText = parseFloat(u.total_points).toFixed(2);
+                document.getElementById('display-qr').innerText = u.qr_code;
+                
+                // Snap to user screen if not already visible
+                if (currentUserId !== u.id) {
+                    document.getElementById('idle-screen').classList.remove('active');
+                    document.getElementById('user-screen').classList.add('active');
+                    currentUserId = u.id;
+                }
+            } else {
+                // No user found, snap back to QR Code screen
+                if (currentUserId !== null) {
+                    document.getElementById('user-screen').classList.remove('active');
+                    document.getElementById('idle-screen').classList.add('active');
+                    currentUserId = null;
+                }
+            }
+        } catch(e) {
+            console.error("LCD Polling Error:", e);
+        }
+        
+        // Re-poll every 2 seconds for real-time responsiveness
+        setTimeout(pollStatus, 2000);
+    }
+
+    // Initialize Polling
+    window.onload = pollStatus;
+</script>
+
+</body>
+</html>

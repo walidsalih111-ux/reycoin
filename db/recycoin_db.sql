@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 11, 2026 at 08:10 PM
+-- Generation Time: May 13, 2026 at 08:50 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -40,7 +40,13 @@ CREATE TABLE `deposits` (
 --
 
 INSERT INTO `deposits` (`id`, `user_id`, `bottle_size`, `points_earned`, `created_at`) VALUES
-(1, 1, 'Bulk Deposit (34 bot', 102.00, '2026-05-11 18:08:02');
+(1, 1, 'Bulk Deposit (34 bot', 102.00, '2026-05-11 18:08:02'),
+(2, 2, 'Bulk Deposit (34 bot', 102.00, '2026-05-11 18:23:48'),
+(3, 2, 'Bulk Deposit (29 bot', 87.00, '2026-05-11 18:57:38'),
+(4, 2, 'Bulk Deposit (1 bott', 1.00, '2026-05-11 19:10:41'),
+(5, 1, 'Bulk Deposit (35 bot', 103.00, '2026-05-12 00:53:21'),
+(6, 1, 'Bulk Deposit (1 bott', 1.00, '2026-05-12 01:21:21'),
+(7, 1, 'Bulk Deposit (34 bot', 102.00, '2026-05-12 06:50:34');
 
 -- --------------------------------------------------------
 
@@ -60,7 +66,7 @@ CREATE TABLE `personnel` (
 --
 
 INSERT INTO `personnel` (`id`, `username`, `password_hash`, `created_at`) VALUES
-(1, 'admin', 'password_placeholder_here', '2026-05-11 17:46:30');
+(1, 'recycoin', 'recycoin', '2026-05-11 17:46:30');
 
 -- --------------------------------------------------------
 
@@ -76,6 +82,37 @@ CREATE TABLE `redemptions` (
   `points_deducted` decimal(10,2) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `redemptions`
+--
+
+INSERT INTO `redemptions` (`id`, `user_id`, `personnel_id`, `reward_item`, `points_deducted`, `created_at`) VALUES
+(1, 2, 1, '1kg Rice', 50.00, '2026-05-11 18:24:27'),
+(2, 2, 1, 'Canned Goods', 30.00, '2026-05-11 18:24:32'),
+(3, 2, 1, '100 Points Reward', 100.00, '2026-05-11 18:57:56'),
+(4, 1, 1, '100 Points Reward', 100.00, '2026-05-12 00:48:45'),
+(5, 1, 1, '100 Points Reward', 100.00, '2026-05-12 01:35:21'),
+(6, 1, 1, '100 Points Reward', 100.00, '2026-05-12 06:50:46');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `system_lock`
+--
+
+CREATE TABLE `system_lock` (
+  `id` int(11) NOT NULL,
+  `user_qr` varchar(50) DEFAULT NULL,
+  `expires_at` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `system_lock`
+--
+
+INSERT INTO `system_lock` (`id`, `user_qr`, `expires_at`) VALUES
+(1, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -97,8 +134,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `ip_address`, `qr_code`, `full_name`, `total_points`, `created_at`) VALUES
-(1, '::1', 'RC-2026-324992', 'Resident (::1)', 102.00, '2026-05-11 17:47:22'),
-(2, '10.167.202.29', 'RC-2026-0F33A9', 'Resident (10.167.202.29)', 0.00, '2026-05-11 17:48:05');
+(1, '::1', 'RC-2026-324992', 'Al-Raji Theng', 8.00, '2026-05-11 17:47:22'),
+(2, '10.167.202.29', 'RC-2026-0F33A9', 'Walid B. Salih', 10.00, '2026-05-11 17:48:05'),
+(3, '10.167.202.70', 'RC-2026-F31490', 'TAE', 0.00, '2026-05-12 06:46:34'),
+(4, '10.167.202.251', 'RC-2026-DCA297', 'Resident (10.167.202.251)', 0.00, '2026-05-12 06:59:55');
 
 --
 -- Indexes for dumped tables
@@ -126,6 +165,12 @@ ALTER TABLE `redemptions`
   ADD KEY `personnel_id` (`personnel_id`);
 
 --
+-- Indexes for table `system_lock`
+--
+ALTER TABLE `system_lock`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -141,7 +186,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `deposits`
 --
 ALTER TABLE `deposits`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `personnel`
@@ -153,13 +198,13 @@ ALTER TABLE `personnel`
 -- AUTO_INCREMENT for table `redemptions`
 --
 ALTER TABLE `redemptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables

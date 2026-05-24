@@ -2,7 +2,6 @@
 // AT THE VERY TOP: Validate the Session
 session_start();
 if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in'] !== true) {
-    // If not logged in, redirect them immediately to the index page.
     header("Location: index.php");
     exit;
 }
@@ -12,24 +11,21 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>RECYCOIN - Personnel Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
+<title>RECYCOIN - Personnel</title>
+<script src="functions/font.js"></script>
+<script src="functions/tailwind.js"></script>
 
 <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
 <link rel="shortcut icon" href="assets/logo.png">
 <link rel="apple-touch-icon" href="assets/logo.png">
 <style>
-    :root { --g900: #042c1e; --g700: #1a7f4c; /* Adjusted to match reference image */ --a500: #BA7517; }
+    :root { --g900: #042c1e; --g700: #1a7f4c; --a500: #BA7517; }
     body { font-family: 'DM Sans', sans-serif; background-color: #042c1e; color: #fff; margin: 0; }
     .app-container { max-width: 480px; margin: 0 auto; background: var(--g900); min-height: 100vh; display: flex; flex-direction: column; }
     .card { background: white; color: #1a1a1a; border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 16px; }
     .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; opacity: 0; transition: 0.3s; z-index: 100; white-space: nowrap;}
     .toast.show { opacity: 1; }
-    #reader video { border-radius: 12px; object-fit: cover; }
     
-    /* Scrollbar styling for history modal */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -37,64 +33,63 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 </style>
 </head>
 <body>
-<div class="app-container p-6 relative">
+<div class="app-container p-4 md:p-6 relative">
     
     <div id="toast" class="toast">Message</div>
 
-    <div class="flex items-center justify-between mb-8 pt-4">
-        <div>
-            <h1 class="text-2xl font-bold tracking-wide">RECYCOIN Admin</h1>
-            <p class="text-sm text-green-200">Barangay Hall Personnel</p>
+    <!-- FIXED: Header Overlap and Spacing -->
+    <div class="flex items-center justify-between mb-6 pt-4">
+        <div class="flex-1 min-w-0 pr-2">
+            <div class="flex items-center gap-2">
+                <img src="assets/logo.png" alt="Logo" class="w-7 h-7 rounded-full bg-white p-0.5 shadow-sm object-contain flex-shrink-0">
+                <h1 class="text-xl font-bold tracking-wide truncate">RECYCOIN</h1>
+            </div>
+            <p class="text-[13px] text-green-200 mt-1 truncate">Barangay Personnel</p>
         </div>
-        <div class="flex gap-2">
-            <!-- Edit Credentials Icon -->
-            <button onclick="openEditCredentialsModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center" title="Edit Credentials">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+        <div class="flex gap-1.5 items-center flex-shrink-0">
+            
+            <!-- Bin Status Badge -->
+            <div class="bg-black/20 px-2.5 py-1.5 rounded-lg border border-white/10 text-center flex-shrink-0" title="RVM Machine Fill Level">
+                <p class="text-[9px] text-green-200 uppercase tracking-wider mb-0.5 opacity-80 leading-none">Bin Level</p>
+                <p class="text-[13px] font-bold text-white transition-colors duration-300 leading-none mt-1" id="admin-bin-text">--%</p>
+            </div>
+
+            <button onclick="openEditCredentialsModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center flex-shrink-0" title="Edit Credentials">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
             
-            <!-- Global History Icon -->
-            <button onclick="openAdminHistoryModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center" title="Global History">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <button onclick="openAdminHistoryModal()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center flex-shrink-0" title="Global History">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             </button>
             
-            <!-- Logout Icon -->
-            <button onclick="logoutPersonnel()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center gap-2 text-sm" title="Logout & Switch to Resident">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <button onclick="logoutPersonnel()" class="bg-white/10 p-2 rounded-lg text-white hover:bg-white/20 transition tooltip flex items-center justify-center flex-shrink-0" title="Logout">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
             </button>
         </div>
     </div>
 
-    <!-- Step 1: Scan -->
+    <!-- Warning Banner for Bin Overflow -->
+    <div id="admin-bin-warning" class="hidden mb-6 bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-xl text-center font-bold text-[13px] animate-pulse shadow-md relative overflow-hidden">
+        <div class="absolute inset-0 bg-red-500/10 blur-xl pointer-events-none"></div>
+        <span class="relative z-10 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            RVM BIN IS FULL! MACHINE IS DISABLED. PLEASE EMPTY.
+        </span>
+    </div>
+
+    <!-- Step 1: ID Entry -->
     <div id="step-scan" class="card">
-        <h2 class="font-bold text-lg mb-2 text-gray-900">Scan Resident ID</h2>
-        <p class="text-sm text-gray-500 mb-4">Use the camera to scan the Resident's QR code.</p>
-        
-        <!-- Scanner Window -->
-        <div id="reader" width="100%" class="mb-4 hidden rounded-xl overflow-hidden border-2 border-green-200 bg-gray-50"></div>
+        <h2 class="font-bold text-lg mb-2 text-gray-900">Enter Resident ID</h2>
+        <p class="text-sm text-gray-500 mb-6">Type the Resident's unique ID code to process their redemption request.</p>
 
-        <button id="start-scan-btn" onclick="startScanner()" class="w-full bg-green-50 text-green-800 font-bold py-4 rounded-xl mb-2 border border-green-200 hover:bg-green-100 transition flex justify-center items-center gap-2 shadow-sm">
-            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            Open Camera Scanner
-        </button>
-
-        <button id="stop-scan-btn" onclick="stopScanner()" class="w-full bg-red-50 text-red-600 font-bold py-4 rounded-xl mb-2 hidden transition shadow-sm">
-            Close Camera
-        </button>
-
-        <div class="flex items-center my-5">
-            <div class="flex-grow border-t border-gray-100"></div>
-            <span class="mx-4 text-gray-400 text-xs tracking-wider">OR ENTER MANUALLY</span>
-            <div class="flex-grow border-t border-gray-100"></div>
-        </div>
-
-        <input type="text" id="qr-input" placeholder="e.g. RC-2026-00142" class="w-full border border-gray-200 p-4 rounded-xl font-mono mb-4 text-center tracking-widest outline-none focus:border-[var(--g700)] focus:ring-2 focus:ring-green-100 transition-all text-gray-800">
+        <input type="text" id="qr-input" placeholder="e.g. RC-2026-XXXXXX" class="w-full border border-gray-200 p-4 rounded-xl font-mono mb-4 text-center tracking-widest outline-none focus:border-[var(--g700)] focus:ring-2 focus:ring-green-100 transition-all text-gray-800 uppercase text-lg">
         
         <button onclick="verifyQR()" class="w-full bg-[var(--g700)] text-white font-bold py-4 rounded-xl hover:bg-green-800 transition shadow-md">
             Verify Resident
         </button>
     </div>
 
-    <!-- Step 2: Immediate 100 Pt Reward (Hidden initially) -->
+    <!-- Step 2: Immediate 100 Pt Reward -->
     <div id="step-reward" class="card hidden">
         <div class="flex justify-between items-start mb-6">
             <div>
@@ -118,60 +113,62 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         </button>
         
         <div class="text-center">
-            <!-- CANCEL BUTTON: Properly hooked to the resetScan() function -->
             <button onclick="resetScan()" class="text-[15px] text-gray-400 underline font-medium hover:text-gray-600 transition-colors py-2 px-4 rounded-lg active:bg-gray-50">
                 Cancel
             </button>
         </div>
     </div>
 
-    <!-- EDIT CREDENTIALS MODAL -->
-    <div id="edit-credentials-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-sm rounded-2xl p-6 relative shadow-2xl text-gray-800">
-            <h2 class="text-xl font-bold text-[var(--g900)] mb-2">Edit Credentials</h2>
-            <p class="text-sm text-gray-500 mb-4">Update your admin username and password.</p>
-            
-            <input type="text" id="new-admin-user" class="w-full border p-4 rounded-xl mb-3 outline-none focus:border-[var(--g700)]" placeholder="New Username">
-            
-            <div class="relative mb-5">
-                <input type="password" id="new-admin-pass" class="w-full border p-4 rounded-xl outline-none focus:border-[var(--g700)] pr-12" placeholder="New Password">
-                <!-- Eye Icon Toggle -->
-                <button type="button" onclick="togglePasswordVisibility('new-admin-pass', 'eye-icon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[var(--g700)] focus:outline-none transition-colors">
-                    <svg id="eye-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                </button>
-            </div>
+    <!-- FIXED: EDIT CREDENTIALS MODAL -->
+    <div id="edit-credentials-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50">
+        <div class="w-full h-full flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-[400px] rounded-2xl p-6 relative shadow-2xl text-gray-800">
+                <h2 class="text-xl font-bold text-[var(--g900)] mb-2">Edit Credentials</h2>
+                <p class="text-sm text-gray-500 mb-4">Update your admin username and password.</p>
+                
+                <input type="text" id="new-admin-user" class="w-full border p-4 rounded-xl mb-3 outline-none focus:border-[var(--g700)]" placeholder="New Username">
+                
+                <div class="relative mb-5">
+                    <input type="password" id="new-admin-pass" class="w-full border p-4 rounded-xl outline-none focus:border-[var(--g700)] pr-12" placeholder="New Password">
+                    <!-- Eye Icon Toggle -->
+                    <button type="button" onclick="togglePasswordVisibility('new-admin-pass', 'eye-icon')" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[var(--g700)] focus:outline-none transition-colors">
+                        <svg id="eye-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
 
-            <div class="flex gap-3">
-                <button onclick="closeModal('edit-credentials-modal')" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
-                <button onclick="saveAdminCredentials()" class="flex-[2] py-4 bg-[var(--g700)] text-white rounded-xl font-bold hover:bg-green-800 transition">Save Changes</button>
+                <div class="flex gap-3">
+                    <button onclick="closeModal('edit-credentials-modal')" class="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition">Cancel</button>
+                    <button onclick="saveAdminCredentials()" class="flex-[2] py-4 bg-[var(--g700)] text-white rounded-xl font-bold hover:bg-green-800 transition">Save Changes</button>
+                </div>
             </div>
         </div>
     </div>  
 
-    <!-- GLOBAL HISTORY LOG MODAL -->
-    <div id="admin-history-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 flex flex-col items-center justify-end p-0">
-        <div class="bg-white w-full max-w-md h-[80vh] rounded-t-3xl p-6 flex flex-col relative shadow-[0_-10px_40px_rgba(0,0,0,0.1)] text-gray-800">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-[var(--g900)]">Transaction History</h2>
-                <button onclick="closeAdminHistoryModal()" class="bg-gray-100 p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            
-            <div class="flex items-center gap-2 mb-4 bg-green-50 text-[var(--g700)] p-2 rounded-xl text-xs font-bold justify-center border border-green-100">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--g700)] opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-[var(--g700)]"></span>
-                </span>
-                LIVE UPDATES ACTIVE
-            </div>
+    <!-- FIXED: GLOBAL HISTORY LOG MODAL -->
+    <div id="admin-history-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50">
+        <div class="w-full h-full flex flex-col items-center justify-end p-0">
+            <div class="bg-white w-full max-w-[480px] h-[85vh] rounded-t-3xl p-6 flex flex-col relative shadow-[0_-10px_40px_rgba(0,0,0,0.1)] text-gray-800 m-0 border-none">
+                <div class="flex justify-between items-center mb-4 shrink-0">
+                    <h2 class="text-xl font-bold text-[var(--g900)]">Transaction History</h2>
+                    <button onclick="closeAdminHistoryModal()" class="bg-gray-100 p-2 rounded-full text-gray-500 hover:bg-gray-200 transition-colors">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                
+                <div class="flex items-center gap-2 mb-4 bg-green-50 text-[var(--g700)] p-2 rounded-xl text-xs font-bold justify-center border border-green-100 shrink-0">
+                    <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--g700)] opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-[var(--g700)]"></span>
+                    </span>
+                    LIVE UPDATES ACTIVE
+                </div>
 
-            <div class="overflow-y-auto flex-1 pb-4" id="admin-history-list">
-                <!-- History Items injected via JS -->
-                <p class="text-center text-sm text-gray-400 mt-10">Loading history...</p>
+                <div class="overflow-y-auto flex-1 pb-4" id="admin-history-list">
+                    <p class="text-center text-sm text-gray-400 mt-10">Loading history...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -180,9 +177,46 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 
 <script>
     let currentResident = null;
-    let html5QrcodeScanner = null;
     let historyPollingInterval = null;
 
+    // --- NEW: BIN LEVEL POLLING --- //
+    async function fetchBinStatus() {
+        try {
+            let res = await fetch('api.php?action=bin_status');
+            let json = await res.json();
+            if (json.status === 'success') {
+                let fill = parseFloat(json.fill_percent);
+                let textEl = document.getElementById('admin-bin-text');
+                let warningEl = document.getElementById('admin-bin-warning');
+                
+                textEl.innerText = fill + '%';
+                
+                // Color Code Based on Fill Severity
+                if (fill >= 90) {
+                    textEl.classList.add('text-red-400');
+                    textEl.classList.remove('text-yellow-400', 'text-white');
+                } else if (fill >= 60) {
+                    textEl.classList.add('text-yellow-400');
+                    textEl.classList.remove('text-red-400', 'text-white');
+                } else {
+                    textEl.classList.add('text-white');
+                    textEl.classList.remove('text-red-400', 'text-yellow-400');
+                }
+
+                if (json.is_full) {
+                    warningEl.classList.remove('hidden');
+                } else {
+                    warningEl.classList.add('hidden');
+                }
+            }
+        } catch(e) {}
+    }
+    
+    // Initialize Bin Polling
+    fetchBinStatus();
+    setInterval(fetchBinStatus, 3000);
+
+    // --- MISC CONTROLS --- //
     function showToast(msg) {
         const t = document.getElementById('toast');
         t.innerText = msg;
@@ -194,7 +228,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         document.getElementById(id).classList.add('hidden');
     }
 
-    // --- LOGOUT LOGIC --- //
     async function logoutPersonnel() {
         try {
             await fetch('api.php?action=logout');
@@ -204,7 +237,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         }
     }
 
-    // --- CREDENTIALS MANAGEMENT --- //
     function openEditCredentialsModal() {
         document.getElementById('new-admin-user').value = '';
         document.getElementById('new-admin-pass').value = '';
@@ -247,7 +279,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         } catch(e) { showToast("Error updating credentials."); }
     }
 
-    // --- REAL-TIME HISTORY LOGIC --- //
     function openAdminHistoryModal() {
         document.getElementById('admin-history-modal').classList.remove('hidden');
         fetchGlobalHistory();
@@ -307,57 +338,9 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         }).join('');
     }
 
-    // --- IMPROVED CAMERA SCANNER LOGIC --- //
-    function startScanner() {
-        if (window.isSecureContext === false) {
-            showToast("Camera blocked! Access via localhost or HTTPS to use camera.");
-            return;
-        }
-
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showToast("Camera API not supported or blocked by browser permissions.");
-            return;
-        }
-
-        document.getElementById('reader').classList.remove('hidden');
-        document.getElementById('start-scan-btn').classList.add('hidden');
-        document.getElementById('stop-scan-btn').classList.remove('hidden');
-
-        html5QrcodeScanner = new Html5Qrcode("reader");
-        
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        const onSuccess = (decodedText) => {
-            document.getElementById('qr-input').value = decodedText;
-            showToast("QR Code Detected!");
-            stopScanner();
-            verifyQR(); 
-        };
-
-        html5QrcodeScanner.start({ facingMode: "environment" }, config, onSuccess, () => {})
-        .catch((err) => {
-            html5QrcodeScanner.start({ facingMode: "user" }, config, onSuccess, () => {})
-            .catch((err2) => {
-                showToast("Camera access denied. Please grant permissions.");
-                stopScanner();
-            });
-        });
-    }
-
-    function stopScanner() {
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.stop().then(() => {
-                document.getElementById('reader').classList.add('hidden');
-                document.getElementById('start-scan-btn').classList.remove('hidden');
-                document.getElementById('stop-scan-btn').classList.add('hidden');
-                html5QrcodeScanner.clear();
-            }).catch((err) => { console.error("Failed to stop scanner", err); });
-        }
-    }
-
-    // --- VERIFICATION & REDEMPTION LOGIC --- //
     async function verifyQR() {
         const qr = document.getElementById('qr-input').value.trim();
-        if(!qr) return showToast('Please enter or scan a QR code');
+        if(!qr) return showToast('Please enter a Resident ID code');
 
         try {
             let res = await fetch(`api.php?action=get_user&qr=${qr}`);
@@ -380,7 +363,6 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         const btn = document.getElementById('redeem-btn');
         if (points >= 100) {
             btn.disabled = false;
-            // PERFECTLY MATCHING THE UI IN THE IMAGE
             btn.className = "w-full bg-[var(--g700)] text-white font-bold py-4 rounded-xl transition-all hover:bg-[#14663c] shadow-md relative flex items-center justify-center active:scale-[0.99] mb-4";
             btn.innerHTML = `
                 <div class="absolute left-5">
@@ -416,20 +398,14 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     }
 
     function resetScan() {
-        // Ensure camera shuts off gracefully if it was left on
-        try { stopScanner(); } catch(e) {}
-        
-        // Reset the form input and memory
         document.getElementById('qr-input').value = '';
         currentResident = null;
         
-        // Reset button visual state completely
         const btn = document.getElementById('redeem-btn');
         btn.disabled = true;
         btn.className = "w-full bg-gray-100 text-gray-400 font-bold py-4 rounded-xl transition-all cursor-not-allowed mb-4";
         btn.innerHTML = "Confirm 100 Pts Deduction";
         
-        // Switch views back to Step 1
         document.getElementById('step-reward').classList.add('hidden');
         document.getElementById('step-scan').classList.remove('hidden');
     }
