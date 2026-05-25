@@ -142,8 +142,8 @@ def process_bottle_sequence(size_cat, points):
                 servo2.value = servo_value
                 time.sleep(STEP_DELAY)
                 
-            print(">> Gates open. Holding for 4.0 seconds for item slide-down...")
-            time.sleep(4.0)               # Keep acceptance gate open for exactly 4 seconds
+            print(">> Gates open. Holding for 2.0 seconds for item slide-down...")
+            time.sleep(2.0)               # Keep acceptance gate open for exactly 2 seconds
             
             # --- STEP 4: SMOOTH SYNCHRONIZED SWEEP (CLOSE GATE: 0° -> 90°) ---
             print(">> Actuating Gates: Rotating servos 0° -> 90° smoothly (CLOSE)")
