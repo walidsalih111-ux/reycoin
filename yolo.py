@@ -70,6 +70,11 @@ TARGET_ANGLE = 90.0    # Closing angle limit
 TOTAL_STEPS = int(SWEEP_TIME / STEP_DELAY)  # ~22 steps for a 1.0s transition
 STEP_SIZE = TARGET_ANGLE / TOTAL_STEPS      # ~4.09 degrees per step
 
+# Thread-safe Frame Sharing & Anti-Cheat Status variables
+current_frame = None
+current_frame_lock = threading.Lock()
+verification_status_msg = ""  # Updates the HDMI monitor overlay in real time
+
 def get_bin_status():
     """Calculates the fill percentage based on ultrasonic distance reading."""
     if sensor:
@@ -103,18 +108,22 @@ def initialize_servos_to_closed():
 
 def process_bottle_sequence(size_cat, points):
     """
-    Orchestrates the safety-guarded acceptance loop:
+    Orchestrates the safety-guarded acceptance loop with strong Anti-Cheat confirmation:
     1. Checks if the IR safety sensor is blocked (hand in the chute).
-    2. Waits for safety clearance.
-    3. Allocates points & updates queue once cleared.
-    4. Smoothly sweeps both servos from 90° to 0° (OPEN).
-    5. Holds open for 4 seconds, then smoothly sweeps back from 0° to 90° (CLOSE).
+    2. Waits for safety clearance (hand completely removed).
+    3. Settles the bottle for 0.8 seconds.
+    4. Performs spaced Anti-Cheat checks verifying that:
+       - The bottle is still present in the camera stream (via thread-safe frame inspections).
+       - The user has not re-reached inside the chute to grab it back (no IR disruptions).
+    5. Allocates points and updates queue if and only if anti-cheat clears.
+    6. Smoothly sweeps servos to open/close gates, depositing the item safely.
     """
-    global gate_busy, detected_queue
+    global gate_busy, detected_queue, verification_status_msg
     fill_pct, is_full = get_bin_status()
     
     if is_full:
         print(f">> Sequence aborted: BIN IS FULL! ({fill_pct}%)")
+        verification_status_msg = "BIN FULL - ABORTED"
         return
         
     try:
@@ -124,16 +133,95 @@ def process_bottle_sequence(size_cat, points):
         if ir_sensor:
             print(">> Checking Chute: Waiting for resident's hand to clear...")
             while ir_sensor.value == 0:
+                verification_status_msg = "HAND IN CHUTE - REMOVE HAND"
                 print("[ OBJECT DETECTED ] ---> Resident's hand is inside the chute! Holding gates closed.")
                 time.sleep(0.1)  # Poll snappy but without overloading CPU
-            print("[ BEAM CLEAR ] ---> Chute is safe. Initiating acceptance process...")
+            print("[ BEAM CLEAR ] ---> Hand removed. Starting anti-cheat verification...")
 
-        # --- STEP 2: ALLOCATE BOTTLE POINTS ---
+        # --- STEP 2: SETTLEMENT DELAY ---
+        verification_status_msg = "SETTLING BOTTLE... STAND BACK"
+        time.sleep(0.8)
+
+        # --- STEP 3: ANTI-CHEAT VISUAL & SENSOR CONFIRMATION ---
+        verified_detections = 0
+        total_checks = 5
+        check_interval = 0.3
+        ir_violation = False
+        
+        print(">> Anti-Cheat: Starting visual and sensor confirmation...")
+        
+        for c in range(total_checks):
+            # Instantaneous IR sensor check
+            if ir_sensor and ir_sensor.value == 0:
+                print("[ ANTI-CHEAT ALERT ] ---> IR beam broken during verification! Hand detected!")
+                ir_violation = True
+                break
+                
+            verification_status_msg = f"VERIFYING BOTTLE ({c + 1}/{total_checks})..."
+            
+            # Retrieve latest webcam frame thread-safely
+            frame_to_check = None
+            with current_frame_lock:
+                if current_frame is not None:
+                    frame_to_check = current_frame.copy()
+                    
+            if frame_to_check is not None:
+                # Run lightweight YOLO detection check
+                results = model(frame_to_check, classes=[BOTTLE_CLASS_ID], verbose=False, imgsz=320)
+                bottle_found_this_check = False
+                
+                for result in results:
+                    for box in result.boxes:
+                        conf = float(box.conf[0])
+                        if conf > 0.55: # Slightly relaxed threshold for active stream validation
+                            w, h = float(box.xywh[0][2]), float(box.xywh[0][3])
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            
+                            if w > h: 
+                                continue # Skip horizontal objects
+                                
+                            # Crop and analyze the ROI to ensure it is upright
+                            h_frame, w_frame = frame_to_check.shape[:2]
+                            x1_safe, y1_safe = max(0, x1), max(0, y1)
+                            x2_safe, y2_safe = min(w_frame, x2), min(h_frame, y2)
+                            roi = frame_to_check[y1_safe:y2_safe, x1_safe:x2_safe]
+                            
+                            if is_bottle_upright(roi):
+                                bottle_found_this_check = True
+                                break 
+                                
+                if bottle_found_this_check:
+                    verified_detections += 1
+                    print(f"[ CONFIRMATION {c+1}/{total_checks} ] ---> Bottle visible and stable.")
+                else:
+                    print(f"[ CONFIRMATION {c+1}/{total_checks} ] ---> Bottle not found in frame.")
+            else:
+                print(f"[ CONFIRMATION {c+1}/{total_checks} ] ---> Camera frame unavailable.")
+                
+            time.sleep(check_interval)
+
+        # --- STEP 4: VERIFY EVALUATION ---
+        if ir_violation:
+            verification_status_msg = "FAILED: CHUTE DISTURBED"
+            print(">> VERIFICATION FAILED: User broke IR beam during check. Aborting.")
+            time.sleep(1.5)
+            return
+            
+        if verified_detections < 3: # Requires at least 60% of checks to confirm stable presence
+            verification_status_msg = "FAILED: BOTTLE REMOVED"
+            print(f">> VERIFICATION FAILED: Bottle missing/unstable (detected {verified_detections}/{total_checks}). Aborting.")
+            time.sleep(1.5)
+            return
+
+        # Both parameters match! Confirmed legitimate deposit
+        verification_status_msg = f"VERIFIED! +{points} PTS"
         detected_queue.append({"size": size_cat, "points": points})
-        print(f">> Points Allocated: +{points} pts for {size_cat} PET bottle.")
+        print(f">> Points Confirmed: +{points} pts for {size_cat} PET bottle.")
+        time.sleep(0.5)
 
-        # --- STEP 3: SMOOTH SYNCHRONIZED SWEEP (OPEN GATE: 90° -> 0°) ---
+        # --- STEP 5: SMOOTH SYNCHRONIZED SWEEP (OPEN GATE: 90° -> 0°) ---
         if servo1 and servo2:
+            verification_status_msg = "OPENING GATES..."
             print(">> Actuating Gates: Rotating servos 90° -> 0° smoothly (OPEN)")
             for step in range(TOTAL_STEPS + 1):
                 angle = TARGET_ANGLE - (step * STEP_SIZE) # Sweep down to 0 degrees
@@ -142,10 +230,12 @@ def process_bottle_sequence(size_cat, points):
                 servo2.value = servo_value
                 time.sleep(STEP_DELAY)
                 
+            verification_status_msg = "DEPOSITING BOTTLE..."
             print(">> Gates open. Holding for 2.0 seconds for item slide-down...")
             time.sleep(2.0)               # Keep acceptance gate open for exactly 2 seconds
             
-            # --- STEP 4: SMOOTH SYNCHRONIZED SWEEP (CLOSE GATE: 0° -> 90°) ---
+            # --- STEP 6: SMOOTH SYNCHRONIZED SWEEP (CLOSE GATE: 0° -> 90°) ---
+            verification_status_msg = "CLOSING GATES..."
             print(">> Actuating Gates: Rotating servos 0° -> 90° smoothly (CLOSE)")
             for step in range(TOTAL_STEPS + 1):
                 angle = step * STEP_SIZE                  # Sweep up to 90 degrees
@@ -160,12 +250,14 @@ def process_bottle_sequence(size_cat, points):
             print(">> Gates successfully closed and powered down.")
         else:
             # Simulation mode wait
+            verification_status_msg = "[SIMULATOR] GATES OPENED"
             print(">> [SIMULATOR] Simulating 5.0 seconds gate hold...")
             time.sleep(5.0)
             
     except Exception as e:
         print(f"Gate sequencing error: {e}")
     finally:
+        verification_status_msg = ""
         gate_busy = False  # Re-enable model inference for subsequent bottles
 
 # ==========================================
@@ -263,7 +355,7 @@ def system_status():
 # 5. OPENCV NATIVE GUI LOOP (Main Thread)
 # ==========================================
 def main_gui_loop():
-    global is_camera_active, detected_queue, last_detection_time, gate_busy
+    global is_camera_active, detected_queue, last_detection_time, gate_busy, current_frame, verification_status_msg
     cap = None
     window_name = "PET Bottle Scanner"
 
@@ -297,23 +389,31 @@ def main_gui_loop():
             time.sleep(0.1)
             continue
 
+        # Keep current shared frame continuously updated for worker-thread checks
+        with current_frame_lock:
+            current_frame = frame.copy()
+
         fill_pct, is_full = get_bin_status()
 
         # -------------------------------------------------------------
-        # BYPASS LOOP: If acceptance gate is actively moving, pause YOLOv8 
-        # inferences to prevent CPU spikes from jittering the servo.
+        # BYPASS OVERLAY: Display beautiful overlay on HDMI screen while 
+        # gate acts or active Anti-Cheat verification sequences execute.
         # -------------------------------------------------------------
         if gate_busy:
-            cv2.rectangle(frame, (10, 15), (630, 85), (0, 0, 0), -1)
-            cv2.rectangle(frame, (10, 15), (630, 85), (0, 255, 0), 2)
+            # Render elegant status container matching recycoin look and feel
+            # Dark background frame header
+            cv2.rectangle(frame, (15, 15), (625, 95), (30, 44, 4), -1)   # Recycoin Dark Green background
+            cv2.rectangle(frame, (15, 15), (625, 95), (165, 202, 93), 2)  # Recycoin Light Green border
             
-            # Show a specialized safety message if hand triggers sensor
-            if ir_sensor and ir_sensor.value == 0:
-                cv2.putText(frame, "PLEASE REMOVE HAND FROM CHUTE!", (35, 57), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            else:
-                cv2.putText(frame, "ACCEPTING BOTTLE... PLEASE WAIT", (35, 57), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            # Show the active status statement dynamically
+            status_text = verification_status_msg if verification_status_msg else "PROCESSING..."
+            cv2.putText(frame, status_text, (35, 62), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+            
+            # Show live bin telemetry
+            bin_text = f"Bin: {fill_pct}%"
+            cv2.putText(frame, bin_text, (505, 62), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (165, 202, 93), 2)
             
             cv2.imshow(window_name, frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
