@@ -5,7 +5,7 @@ import numpy as np
 from flask import Flask, jsonify
 from flask_cors import CORS # type: ignore
 from ultralytics import YOLO # type: ignore
-from gpiozero import Servo, DigitalInputDevice, DistanceSensor # ---> Integrated Hardware Control
+from gpiozero import AngularServo, DigitalInputDevice, DistanceSensor # ---> Upgraded to AngularServo Control
 
 # ==========================================
 # 1. INITIALIZE FLASK & YOLO MODEL
@@ -17,28 +17,40 @@ model = YOLO('yolov8n.pt')
 BOTTLE_CLASS_ID = 39 
 
 # ==========================================
-# 2. HARDWARE INITIALIZATION (Servos, IR, & Ultrasonic)
+# 2. HARDWARE INITIALIZATION (Angular Servos, IR, & Ultrasonic)
 # ==========================================
 
-# A. Double Acceptance Gate Servos (GPIO 17 & 18)
-# Safely adjusted pulse widths to prevent physical limits stalling, grinding, and buzzing.
-MIN_PULSE = 0.0006  # 0.6 ms
-MAX_PULSE = 0.0023  # 2.3 ms
+# A. Double Acceptance Gate Angular Servos (GPIO 17 & 18)
+# Adjusted pulse width boundaries to match MG99R/MG996R full 180-degree rotation (from test_servo.py)
+MIN_PULSE = 0.0005  # 500us
+MAX_PULSE = 0.0025  # 2500us
 
 try:
-    servo1 = Servo(17, min_pulse_width=MIN_PULSE, max_pulse_width=MAX_PULSE)
-    servo2 = Servo(18, min_pulse_width=MIN_PULSE, max_pulse_width=MAX_PULSE)
+    # Initialize both double acceptance gate servos as AngularServos
+    servo1 = AngularServo(
+        17, 
+        min_angle=0, 
+        max_angle=180, 
+        min_pulse_width=MIN_PULSE, 
+        max_pulse_width=MAX_PULSE
+    )
+    servo2 = AngularServo(
+        18, 
+        min_angle=0, 
+        max_angle=180, 
+        min_pulse_width=MIN_PULSE, 
+        max_pulse_width=MAX_PULSE
+    )
     
-    # Default State: Acceptance Gate Closed (90 degrees). 
-    # Translating to gpiozero range (-1.0 to 1.0): (90.0 / 90.0) - 1.0 = 0.0
-    servo1.value = 0.0
-    servo2.value = 0.0
+    # Default State: Acceptance Gate Closed (90 degrees / Center)
+    servo1.angle = 90
+    servo2.angle = 90
     time.sleep(0.5)
     servo1.detach()     # Cut control signal to stop idle jitter/humming
     servo2.detach()
-    print("✅ Hardware: Servos (GPIO 17 & 18) Initialized. Default closed (90°).")
+    print("✅ Hardware: Angular Servos (GPIO 17 & 18) Initialized. Default closed (90°).")
 except Exception as e:
-    print("⚠️ WARNING: Servos initialization failed. Running without hardware servos.", e)
+    print("⚠️ WARNING: Angular Servos initialization failed. Running without hardware servos.", e)
     servo1 = None
     servo2 = None
 
@@ -98,8 +110,8 @@ def initialize_servos_to_closed():
     if servo1 and servo2:
         try:
             print(">> Securing default/resting position: both servos at 90° (Closed)")
-            servo1.value = 0.0
-            servo2.value = 0.0
+            servo1.angle = 90
+            servo2.angle = 90
             time.sleep(0.5)
             servo1.detach()
             servo2.detach()
@@ -225,9 +237,8 @@ def process_bottle_sequence(size_cat, points):
             print(">> Actuating Gates: Rotating servos 90° -> 0° smoothly (OPEN)")
             for step in range(TOTAL_STEPS + 1):
                 angle = TARGET_ANGLE - (step * STEP_SIZE) # Sweep down to 0 degrees
-                servo_value = (angle / 90.0) - 1.0        # Map to gpiozero's -1.0 to 1.0 bounds
-                servo1.value = servo_value
-                servo2.value = servo_value
+                servo1.angle = angle
+                servo2.angle = angle
                 time.sleep(STEP_DELAY)
                 
             verification_status_msg = "DEPOSITING BOTTLE..."
@@ -239,9 +250,8 @@ def process_bottle_sequence(size_cat, points):
             print(">> Actuating Gates: Rotating servos 0° -> 90° smoothly (CLOSE)")
             for step in range(TOTAL_STEPS + 1):
                 angle = step * STEP_SIZE                  # Sweep up to 90 degrees
-                servo_value = (angle / 90.0) - 1.0
-                servo1.value = servo_value
-                servo2.value = servo_value
+                servo1.angle = angle
+                servo2.angle = angle
                 time.sleep(STEP_DELAY)
                 
             # Detach to kill the holding current to stop hums and extend the motor life span
