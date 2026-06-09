@@ -22,7 +22,7 @@ servo = AngularServo(
 try:
     print("Starting loop. Press Ctrl+C to terminate safely.")
     while True:
-        print("Moving to 0 degrees...")
+        print("Moving to 180 degrees...")
         servo.angle = 180
         time.sleep(2)
 
@@ -30,7 +30,7 @@ try:
  #       servo.angle = 90
   #      time.sleep(2)
 
-        print("Moving to 180 degrees...")
+        print("Moving to 90 degrees...")
         servo.angle = 90
         time.sleep(2)
 
