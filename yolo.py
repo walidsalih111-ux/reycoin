@@ -127,13 +127,13 @@ try:
         max_pulse_width=MAX_PULSE
     )
     
-    # Default State: Acceptance Gate Closed (90 degrees / Center)
-    servo1.angle = 90
-    servo2.angle = 90
+    # Default State: Acceptance Gate Closed (180 degrees resting/center)
+    servo1.angle = 180
+    servo2.angle = 180
     time.sleep(0.5)
     servo1.detach()     # Cut control signal to stop idle jitter/humming
     servo2.detach()
-    print("✅ Hardware: Angular Servos (GPIO 17 & 18) Initialized. Default closed (90°).")
+    print("✅ Hardware: Angular Servos (GPIO 17 & 18) Initialized. Default closed (180°).")
 except Exception as e:
     print("⚠️ WARNING: Angular Servos initialization failed. Running without hardware servos.", e)
     servo1 = None
@@ -171,9 +171,12 @@ MAX_FILL_CM = 15.0     # Clearance from top sensor to be considered 100% full
 # Smooth sweep configurations (aligned with 50Hz refresh rate)
 SWEEP_TIME = 1.0       # Rotation duration in seconds
 STEP_DELAY = 0.045     # 45ms delay per step (prevents jitter)
-TARGET_ANGLE = 90.0    # Closing angle limit
+
+CLOSED_ANGLE = 180.0   # Resting/Closed position angle
+OPEN_ANGLE = 90.0      # Active/Open position angle
+
 TOTAL_STEPS = int(SWEEP_TIME / STEP_DELAY)  # ~22 steps for a 1.0s transition
-STEP_SIZE = TARGET_ANGLE / TOTAL_STEPS      # ~4.09 degrees per step
+STEP_SIZE = (CLOSED_ANGLE - OPEN_ANGLE) / TOTAL_STEPS      # ~4.09 degrees per step
 
 # Thread-safe Frame Sharing, Anti-Cheat Status & Light State variables
 current_frame = None
@@ -201,12 +204,12 @@ def get_bin_status():
     return 0.0, False
 
 def initialize_servos_to_closed():
-    """Returns both servos to their default 90° (closed) resting positions safely."""
+    """Returns both servos to their default 180° (closed) resting positions safely."""
     if servo1 and servo2:
         try:
-            print(">> Securing default/resting position: both servos at 90° (Closed)")
-            servo1.angle = 90
-            servo2.angle = 90
+            print(">> Securing default/resting position: both servos at 180° (Closed)")
+            servo1.angle = CLOSED_ANGLE
+            servo2.angle = CLOSED_ANGLE
             time.sleep(0.5)
             servo1.detach()
             servo2.detach()
@@ -335,10 +338,10 @@ def process_bottle_sequence(size_cat, points):
         print(f">> Points Confirmed: +{points} pts for {size_cat} PET bottle.")
         time.sleep(0.5)
 
-        # --- STEP 5: SMOOTH SYNCHRONIZED SWEEP (OPEN GATE: 90° -> 0°) ---
+        # --- STEP 5: SMOOTH SYNCHRONIZED SWEEP (OPEN GATE: 180° -> 90°) ---
         if servo1 and servo2:
             verification_status_msg = "OPENING GATES..."
-            print(">> Actuating Gates: Rotating servos 90° -> 0° smoothly (OPEN)")
+            print(">> Actuating Gates: Rotating servos 180° -> 90° smoothly (OPEN)")
             
             # --- MANDATORY HARDWARE REQUIREMENT: TURN OFF LIGHT AS SOON AS THE GATE OPENS ---
             if led_light:
@@ -347,7 +350,7 @@ def process_bottle_sequence(size_cat, points):
                 print("[ LIGHTS OFF ] ---> Acceptance gates opening. Disabling chute lights.")
 
             for step in range(TOTAL_STEPS + 1):
-                angle = TARGET_ANGLE - (step * STEP_SIZE) # Sweep down to 0 degrees
+                angle = CLOSED_ANGLE - (step * STEP_SIZE) # Sweep down to 90 degrees
                 servo1.angle = angle
                 servo2.angle = angle
                 time.sleep(STEP_DELAY)
@@ -356,11 +359,11 @@ def process_bottle_sequence(size_cat, points):
             print(">> Gates open. Holding for 2.0 seconds for item slide-down...")
             time.sleep(2.0)               # Keep acceptance gate open for exactly 2 seconds
             
-            # --- STEP 6: SMOOTH SYNCHRONIZED SWEEP (CLOSE GATE: 0° -> 90°) ---
+            # --- STEP 6: SMOOTH SYNCHRONIZED SWEEP (CLOSE GATE: 90° -> 180°) ---
             verification_status_msg = "CLOSING GATES..."
-            print(">> Actuating Gates: Rotating servos 0° -> 90° smoothly (CLOSE)")
+            print(">> Actuating Gates: Rotating servos 90° -> 180° smoothly (CLOSE)")
             for step in range(TOTAL_STEPS + 1):
-                angle = step * STEP_SIZE                  # Sweep up to 90 degrees
+                angle = OPEN_ANGLE + (step * STEP_SIZE)                  # Sweep up to 180 degrees
                 servo1.angle = angle
                 servo2.angle = angle
                 time.sleep(STEP_DELAY)
@@ -451,7 +454,7 @@ def start_camera():
     global is_camera_active
     is_camera_active = True
     
-    # Secure and ensure both servos are set at 90° (closed) resting positions on launch
+    # Secure and ensure both servos are set at 180° (closed) resting positions on launch
     threading.Thread(target=initialize_servos_to_closed, daemon=True).start()
     
     # Make sure light is initially OFF when session starts
@@ -467,7 +470,7 @@ def stop_camera():
     global is_camera_active
     is_camera_active = False
     
-    # Return both servos back to 90° (closed) resting positions when the session terminates
+    # Return both servos back to 180° (closed) resting positions when the session terminates
     threading.Thread(target=initialize_servos_to_closed, daemon=True).start()
     
     # Turn off the LED lighting completely on session close
