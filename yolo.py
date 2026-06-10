@@ -127,13 +127,12 @@ try:
         max_pulse_width=MAX_PULSE
     )
     
-    # Default State: Acceptance Gate Closed (180 degrees resting/center)
+    # Default State: Acceptance Gate Fixed Closed (180°).
+    # Signal is kept ACTIVE so the servo physically locks at 180° and cannot be pushed open.
     servo1.angle = 180
     servo2.angle = 180
     time.sleep(0.5)
-    servo1.detach()     # Cut control signal to stop idle jitter/humming
-    servo2.detach()
-    print("✅ Hardware: Angular Servos (GPIO 17 & 18) Initialized. Default closed (180°).")
+    print("✅ Hardware: Angular Servos (GPIO 17 & 18) Initialized. Fixed closed at 180° (signal active).")
 except Exception as e:
     print("⚠️ WARNING: Angular Servos initialization failed. Running without hardware servos.", e)
     servo1 = None
@@ -204,15 +203,17 @@ def get_bin_status():
     return 0.0, False
 
 def initialize_servos_to_closed():
-    """Returns both servos to their default 180° (closed) resting positions safely."""
+    """
+    Returns both servos to their default 180° (closed) resting positions and keeps the
+    PWM signal ACTIVE so the servo physically locks and cannot drift or be pushed open.
+    """
     if servo1 and servo2:
         try:
-            print(">> Securing default/resting position: both servos at 180° (Closed)")
+            print(">> Securing fixed closed position: both servos locked at 180°")
             servo1.angle = CLOSED_ANGLE
             servo2.angle = CLOSED_ANGLE
             time.sleep(0.5)
-            servo1.detach()
-            servo2.detach()
+            # PWM signal intentionally NOT detached — servo stays locked at 180°
         except Exception as e:
             print(f"Servo resting sequence error: {e}")
 
@@ -368,10 +369,9 @@ def process_bottle_sequence(size_cat, points):
                 servo2.angle = angle
                 time.sleep(STEP_DELAY)
                 
-            # Detach to kill the holding current to stop hums and extend the motor life span
-            servo1.detach()
-            servo2.detach()
-            print(">> Gates successfully closed and powered down.")
+            # PWM signal intentionally NOT detached — servos remain locked at 180°
+            # until the next bottle insertion begins.
+            print(">> Gates closed and locked at 180°. Holding fixed until next bottle.")
         else:
             # Simulation mode wait
             verification_status_msg = "[SIMULATOR] GATES OPENED"

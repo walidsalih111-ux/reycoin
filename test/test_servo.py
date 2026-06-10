@@ -24,20 +24,16 @@ try:
     while True:
         print("Moving to 180 degrees...")
         servo.angle = 180
-        time.sleep(2)
-
-#        print("Moving to 90 degrees (Center)...")
- #       servo.angle = 90
-  #      time.sleep(2)
+        time.sleep(3)
 
         print("Moving to 90 degrees...")
         servo.angle = 90
-        time.sleep(2)
+        time.sleep(3)
 
 except KeyboardInterrupt:
     print("\nTest intercepted by user. Safely resetting servo to center...")
     servo.angle = 180
-    time.sleep(1)
+    time.sleep(3)
     
     # Detach the servo signal to prevent ongoing jitter/holding current
     servo.close()
