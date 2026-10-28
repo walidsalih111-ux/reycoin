@@ -12,7 +12,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>RECYCOIN - Personnel</title>
-<script src="functions/font.js"></script>
+<link href="functions/font.css" rel="stylesheet">
 <script src="functions/tailwind.js"></script>
 
 <link rel="icon" type="image/png" sizes="32x32" href="assets/logo.png">
@@ -23,7 +23,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     body { font-family: 'DM Sans', sans-serif; background-color: #042c1e; color: #fff; margin: 0; }
     .app-container { max-width: 480px; margin: 0 auto; background: var(--g900); min-height: 100vh; display: flex; flex-direction: column; }
     .card { background: white; color: #1a1a1a; border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 16px; }
-    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; opacity: 0; transition: 0.3s; z-index: 100; white-space: nowrap;}
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; opacity: 0; transition: 0.3s; z-index: 100; pointer-events: none; white-space: nowrap;}
     .toast.show { opacity: 1; }
     
     ::-webkit-scrollbar { width: 6px; }
@@ -124,8 +124,10 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         <div class="w-full h-full flex items-center justify-center p-4">
             <div class="bg-white w-full max-w-[400px] rounded-2xl p-6 relative shadow-2xl text-gray-800">
                 <h2 class="text-xl font-bold text-[var(--g900)] mb-2">Edit Credentials</h2>
-                <p class="text-sm text-gray-500 mb-4">Update your admin username and password.</p>
-                
+                <p class="text-sm text-gray-500 mb-4">Enter your current password, then the new username and password.</p>
+
+                <input type="password" id="current-admin-pass" class="w-full border p-4 rounded-xl mb-3 outline-none focus:border-[var(--g700)]" placeholder="Current Password">
+
                 <input type="text" id="new-admin-user" class="w-full border p-4 rounded-xl mb-3 outline-none focus:border-[var(--g700)]" placeholder="New Username">
                 
                 <div class="relative mb-5">
@@ -238,6 +240,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     }
 
     function openEditCredentialsModal() {
+        document.getElementById('current-admin-pass').value = '';
         document.getElementById('new-admin-user').value = '';
         document.getElementById('new-admin-pass').value = '';
         
@@ -262,14 +265,16 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     }
 
     async function saveAdminCredentials() {
+        const current = document.getElementById('current-admin-pass').value;
         const u = document.getElementById('new-admin-user').value.trim();
         const p = document.getElementById('new-admin-pass').value;
+        if(!current) return showToast("Enter your current password.");
         if(!u || !p) return showToast("Enter both new username and password.");
 
         try {
             let res = await fetch('api.php?action=update_admin', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: u, password: p })
+                body: JSON.stringify({ current_password: current, username: u, password: p })
             });
             let json = await res.json();
             if(json.status === 'success') {
@@ -298,6 +303,11 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         } catch(e) { console.error("Admin history fetch error", e); }
     }
 
+    // History entries are stored data, so escape them before building HTML
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
     function renderAdminHistory(logs) {
         const container = document.getElementById('admin-history-list');
         if(!logs || logs.length === 0) {
@@ -323,10 +333,10 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
                             ${icon}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <p class="font-bold text-gray-900 text-[15px] truncate" title="${log.full_name}">${log.full_name}</p>
+                            <p class="font-bold text-gray-900 text-[15px] truncate" title="${escapeHtml(log.full_name)}">${escapeHtml(log.full_name)}</p>
                             <p class="text-[12px] text-gray-400 leading-tight mt-0.5">
                                 ${dateStr}<br/>
-                                <span class="font-medium ${isDeposit ? 'text-[var(--g700)]' : 'text-orange-500'}">${isDeposit ? 'Deposit' : 'Redemption'}</span> • ${log.detail}
+                                <span class="font-medium ${isDeposit ? 'text-[var(--g700)]' : 'text-orange-500'}">${isDeposit ? 'Deposit' : 'Redemption'}</span> • ${escapeHtml(log.detail)}
                             </p>
                         </div>
                     </div>
@@ -343,7 +353,7 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
         if(!qr) return showToast('Please enter a Resident ID code');
 
         try {
-            let res = await fetch(`api.php?action=get_user&qr=${qr}`);
+            let res = await fetch(`api.php?action=get_user&qr=${encodeURIComponent(qr)}`);
             let json = await res.json();
             
             if (json.status === 'success') {
@@ -380,6 +390,11 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
     async function processRedemption() {
         if (!currentResident) return;
 
+        // Disable right away so a double tap can't send a second redemption
+        const btn = document.getElementById('redeem-btn');
+        if (btn.disabled) return;
+        btn.disabled = true;
+
         try {
             let res = await fetch('api.php?action=redeem', {
                 method: 'POST',
@@ -387,14 +402,16 @@ if (!isset($_SESSION['personnel_logged_in']) || $_SESSION['personnel_logged_in']
                 body: JSON.stringify({ qr: currentResident.qr_code })
             });
             let json = await res.json();
-            
+
             if (json.status === 'success') {
+                document.getElementById('res-pts').innerHTML = `${parseFloat(json.balance).toFixed(2)} <span class="text-sm font-semibold">pts</span>`;
                 showToast('✅ Success! 100 points deducted.');
                 setTimeout(resetScan, 2000);
-            } else {
-                showToast('Error: ' + json.message);
+                return;
             }
+            showToast('Error: ' + json.message);
         } catch(e) { showToast('Network Error'); }
+        btn.disabled = false;
     }
 
     function resetScan() {

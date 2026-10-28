@@ -168,7 +168,7 @@
                 <span class="text-3xl font-black text-[var(--green-700)]" id="session-total-pts">0.00</span>
             </div>
 
-            <button onclick="confirmBalance()" class="w-full py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md hover:bg-green-800 transition">Confirm Balance</button>
+            <button id="confirm-balance-btn" onclick="confirmBalance()" class="w-full py-3 bg-[var(--green-700)] text-white rounded-xl font-bold shadow-md hover:bg-green-800 transition">Confirm Balance</button>
         </div>
     </div>
 </div>
@@ -183,6 +183,9 @@
     let sessionBottles = 0;
     let isForceName = false;
     let binIsFull = false; // NEW: Global bin status state
+    let sessionActive = false; // True while this resident holds the machine
+    let scannerBusy = false;   // True while the machine is still checking a bottle
+    let pollInFlight = false;
 
     function showToast(msg) {
         const t = document.getElementById('toast');
@@ -246,7 +249,7 @@
     async function syncUserData() {
         if (!myAssignedQR) return;
         try {
-            let res = await fetch(`api.php?action=get_user&qr=${myAssignedQR}`);
+            let res = await fetch('api.php?action=me');
             let json = await res.json();
             if (json.status === 'success') {
                 let currentPtsText = document.getElementById('total-points').innerText;
@@ -267,6 +270,9 @@
                     // If points decreased, it means a redemption occurred
                     if (diff < 0) {
                         showToast(`Redemption complete! ${Math.abs(diff).toFixed(2)} pts spent.`);
+                    } else if (!sessionActive) {
+                        // e.g. the last bottle finished verifying after "Confirm Balance"
+                        showToast(`+${diff.toFixed(2)} pts added to your balance.`);
                     }
                 }
 
@@ -378,7 +384,7 @@
             let res = await fetch('api.php?action=update_name', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ qr: myAssignedQR, new_name: name })
+                body: JSON.stringify({ new_name: name })
             });
             let json = await res.json();
             
@@ -398,103 +404,124 @@
     }
 
     // --- YOLO & RVM MODAL LOGIC ---
+    // The server credits each bottle as soon as the scanner verifies it; this page only shows the totals.
     async function openDepositModal() {
-        if(!myAssignedQR) return;
+        if(!myAssignedQR || sessionActive) return;
 
         // Block opening of modal if machine is entirely full
         if (binIsFull) {
             showToast("Bin is currently full! Please wait for personnel to empty it.");
             return;
         }
-        
-        let res = await fetch(`api.php?action=request_lock&qr=${myAssignedQR}`);
-        let json = await res.json();
+
+        // Locks the machine to this resident and starts YOLO (camera feed pops up natively on the Pi)
+        let json;
+        try {
+            let res = await fetch('api.php?action=request_lock');
+            json = await res.json();
+        } catch(e) { showToast('Network error. Please try again.'); return; }
         if(json.status !== 'success') { showToast(json.message); return; }
 
         document.getElementById('deposit-modal').classList.remove('hidden');
-        sessionPoints = 0; sessionBottles = 0; updateSessionUI(); startTimer(); 
+        sessionActive = true; scannerBusy = false;
+        sessionPoints = 0; sessionBottles = 0; updateSessionUI(); startTimer();
 
-        // Start YOLO (Camera feed will pop up natively on the Pi)
-        await fetch('api.php?action=yolo_start');
-        
         yoloPollInterval = setInterval(pollYoloDetection, 1000);
     }
 
     async function pollYoloDetection() {
-        // Double check while inside loop if it suddenly became full
+        if (!sessionActive || pollInFlight) return;
+
+        // Double check while inside loop if it suddenly became full (points so far are already saved)
         if (binIsFull) {
-            closeDepositModal();
-            showToast("Machine reached full capacity. Session auto-closed.");
+            finishSession('Machine reached full capacity.');
             return;
         }
 
+        pollInFlight = true;
         try {
             let res = await fetch('api.php?action=yolo_poll');
             let json = await res.json();
-            if(json.status === 'success') {
-                triggerDetection(true, json.size, json.points);
+            if (!sessionActive) return;
+
+            if (json.status === 'ended' || json.active === false) {
+                finishSession('Session ended.');
+                return;
             }
-        } catch(e) {} 
+            if (json.status === 'success') {
+                const newBottles = json.bottles - sessionBottles;
+                if (newBottles === 1) {
+                    showToast(`✅ Valid PET Detected (${json.last_size})! +${json.last_points} pts.`);
+                } else if (newBottles > 1) {
+                    showToast(`✅ ${newBottles} bottles verified! +${(json.points - sessionPoints).toFixed(2)} pts.`);
+                }
+                if (newBottles > 0) startTimer();
+
+                sessionBottles = json.bottles;
+                sessionPoints = json.points;
+                scannerBusy = json.busy;
+                document.getElementById('total-points').innerText = parseFloat(json.balance).toFixed(2);
+                updateSessionUI();
+            }
+        } catch(e) {
+        } finally {
+            pollInFlight = false;
+        }
     }
 
-    function closeDepositModal() {
+    // Frees the machine and shows what this session earned (the points are already saved)
+    async function finishSession(reason) {
+        if (!sessionActive) return;
+        sessionActive = false;
         document.getElementById('deposit-modal').classList.add('hidden');
         clearInterval(timerInterval);
         clearInterval(yoloPollInterval);
-        
-        // Stop YOLO (Will close the native window on the Pi)
-        fetch('api.php?action=yolo_stop');
 
-        if(myAssignedQR) { fetch(`api.php?action=release_lock&qr=${myAssignedQR}`); }
+        let total = sessionPoints;
+        try {
+            // Stops YOLO (closes the native window on the Pi)
+            let res = await fetch('api.php?action=release_lock');
+            let json = await res.json();
+            if (json.status === 'success') {
+                total = json.points;
+                document.getElementById('total-points').innerText = parseFloat(json.balance).toFixed(2);
+            }
+        } catch(e) {}
+
+        if (total > 0) showToast(`${reason} ${parseFloat(total).toFixed(2)} points added.`);
+        else if (reason !== 'Success!') showToast(`${reason} No bottles were added.`);
     }
 
     function updateSessionUI() {
         document.getElementById('session-total-pts').innerText = parseFloat(sessionPoints).toFixed(2);
         document.getElementById('session-bottle-count').innerText = `${sessionBottles} bottles scanned`;
+
+        // Wait for a bottle that is still being checked, so its points are part of the total
+        const confirmBtn = document.getElementById('confirm-balance-btn');
+        confirmBtn.disabled = scannerBusy;
+        confirmBtn.innerText = scannerBusy ? 'Checking bottle...' : 'Confirm Balance';
+        confirmBtn.classList.toggle('opacity-60', scannerBusy);
     }
 
     function startTimer() {
         clearInterval(timerInterval);
-        timeLeft = 60; 
+        timeLeft = 60;
         document.getElementById('timer-display').innerText = "01:00";
-        
+
         timerInterval = setInterval(() => {
-            timeLeft--; 
+            if (timeLeft > 0) timeLeft--;
             let s = timeLeft % 60;
             document.getElementById('timer-display').innerText = `00:${s < 10 ? '0' : ''}${s}`;
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval); 
-                showToast('Time is up! Auto-confirming balance.');
-                if(sessionPoints > 0) confirmBalance(); else closeDepositModal();
+            // Let a bottle that is still being checked finish before closing
+            if (timeLeft <= 0 && !scannerBusy) {
+                finishSession('Time is up!');
             }
         }, 1000);
     }
 
-    function triggerDetection(isPet, sizeLabel, pointsValue) {
-        if (isPet) {
-            sessionPoints += parseFloat(pointsValue); 
-            sessionBottles++;
-            updateSessionUI(); 
-            startTimer(); 
-            showToast(`✅ Valid PET Detected (${sizeLabel})! +${pointsValue} pts.`);
-            fetch(`api.php?action=extend_lock&qr=${myAssignedQR}`);
-        }
-    }
-
-    async function confirmBalance() {
-        if (sessionPoints <= 0) { closeDepositModal(); return; }
-        try {
-            let res = await fetch('api.php?action=deposit', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ qr: myAssignedQR, size: `Hardware Detect (${sessionBottles})`, points: sessionPoints })
-            });
-            let json = await res.json();
-            if (json.status === 'success') {
-                showToast(`Success! ${sessionPoints} points added.`);
-                initApp(); 
-                closeDepositModal(); 
-            }
-        } catch(e) { showToast('Error during checkout.'); }
+    function confirmBalance() {
+        if (scannerBusy) return;
+        finishSession('Success!');
     }
 
     window.onload = initApp;

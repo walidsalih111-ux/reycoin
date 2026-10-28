@@ -1,229 +1,87 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
+-- RECYCOIN database schema (structure only, no resident data)
 --
--- Host: 127.0.0.1
--- Generation Time: May 13, 2026 at 08:50 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
-
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
-
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
+-- Fresh install: create an empty database and import this file, for example
+--   mysql -u root -e "CREATE DATABASE recycoin_db CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
+--   mysql -u root recycoin_db < db/recycoin_db.sql
+-- (or use phpMyAdmin's Import tab). Existing databases don't need this file:
+-- db/schema.php upgrades them on the first request.
 --
--- Database: `recycoin_db`
+-- When you change the schema, add a migration to db/schema.php and update this file to match.
 --
+-- Default personnel login: recycoin / recycoin. Change it right after the first login
+-- (Personnel page > Edit Credentials).
 
--- --------------------------------------------------------
+SET NAMES utf8mb4;
 
---
--- Table structure for table `deposits`
---
-
-CREATE TABLE `deposits` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `bottle_size` varchar(20) DEFAULT NULL,
-  `points_earned` decimal(10,2) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `qr_code` varchar(50) NOT NULL,
+  `full_name` varchar(100) DEFAULT 'Local Resident',
+  `total_points` decimal(10,2) DEFAULT 0.00,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `device_token` char(64) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `qr_code` (`qr_code`),
+  UNIQUE KEY `device_token` (`device_token`),
+  KEY `ip_address` (`ip_address`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `deposits`
---
-
-INSERT INTO `deposits` (`id`, `user_id`, `bottle_size`, `points_earned`, `created_at`) VALUES
-(1, 1, 'Bulk Deposit (34 bot', 102.00, '2026-05-11 18:08:02'),
-(2, 2, 'Bulk Deposit (34 bot', 102.00, '2026-05-11 18:23:48'),
-(3, 2, 'Bulk Deposit (29 bot', 87.00, '2026-05-11 18:57:38'),
-(4, 2, 'Bulk Deposit (1 bott', 1.00, '2026-05-11 19:10:41'),
-(5, 1, 'Bulk Deposit (35 bot', 103.00, '2026-05-12 00:53:21'),
-(6, 1, 'Bulk Deposit (1 bott', 1.00, '2026-05-12 01:21:21'),
-(7, 1, 'Bulk Deposit (34 bot', 102.00, '2026-05-12 06:50:34');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `personnel`
---
 
 CREATE TABLE `personnel` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `username` varchar(50) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `personnel`
---
-
-INSERT INTO `personnel` (`id`, `username`, `password_hash`, `created_at`) VALUES
-(1, 'recycoin', 'recycoin', '2026-05-11 17:46:30');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `redemptions`
---
+CREATE TABLE `deposits` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `bottle_size` varchar(100) DEFAULT NULL,
+  `points_earned` decimal(10,2) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `event_id` char(32) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `event_id` (`event_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `deposits_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `redemptions` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
   `personnel_id` int(11) DEFAULT NULL,
   `reward_item` varchar(100) DEFAULT NULL,
   `points_deducted` decimal(10,2) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `personnel_id` (`personnel_id`),
+  CONSTRAINT `redemptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `redemptions_ibfk_2` FOREIGN KEY (`personnel_id`) REFERENCES `personnel` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `redemptions`
---
-
-INSERT INTO `redemptions` (`id`, `user_id`, `personnel_id`, `reward_item`, `points_deducted`, `created_at`) VALUES
-(1, 2, 1, '1kg Rice', 50.00, '2026-05-11 18:24:27'),
-(2, 2, 1, 'Canned Goods', 30.00, '2026-05-11 18:24:32'),
-(3, 2, 1, '100 Points Reward', 100.00, '2026-05-11 18:57:56'),
-(4, 1, 1, '100 Points Reward', 100.00, '2026-05-12 00:48:45'),
-(5, 1, 1, '100 Points Reward', 100.00, '2026-05-12 01:35:21'),
-(6, 1, 1, '100 Points Reward', 100.00, '2026-05-12 06:50:46');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `system_lock`
---
 
 CREATE TABLE `system_lock` (
   `id` int(11) NOT NULL,
   `user_qr` varchar(50) DEFAULT NULL,
-  `expires_at` int(11) DEFAULT 0
+  `expires_at` int(11) DEFAULT 0,
+  `started_at` int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `system_lock`
---
-
-INSERT INTO `system_lock` (`id`, `user_qr`, `expires_at`) VALUES
-(1, NULL, 0);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `users`
---
-
-CREATE TABLE `users` (
-  `id` int(11) NOT NULL,
-  `ip_address` varchar(45) NOT NULL,
-  `qr_code` varchar(50) NOT NULL,
-  `full_name` varchar(100) DEFAULT 'Local Resident',
-  `total_points` decimal(10,2) DEFAULT 0.00,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+CREATE TABLE `schema_migrations` (
+  `version` int(11) NOT NULL,
+  `applied_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `users`
---
+INSERT INTO `system_lock` (`id`, `user_qr`, `expires_at`, `started_at`) VALUES (1, NULL, 0, 0);
 
-INSERT INTO `users` (`id`, `ip_address`, `qr_code`, `full_name`, `total_points`, `created_at`) VALUES
-(1, '::1', 'RC-2026-324992', 'Al-Raji Theng', 8.00, '2026-05-11 17:47:22'),
-(2, '10.167.202.29', 'RC-2026-0F33A9', 'Walid B. Salih', 10.00, '2026-05-11 17:48:05'),
-(3, '10.167.202.70', 'RC-2026-F31490', 'TAE', 0.00, '2026-05-12 06:46:34'),
-(4, '10.167.202.251', 'RC-2026-DCA297', 'Resident (10.167.202.251)', 0.00, '2026-05-12 06:59:55');
+-- recycoin / recycoin (bcrypt hash)
+INSERT INTO `personnel` (`id`, `username`, `password_hash`) VALUES
+(1, 'recycoin', '$2y$10$6S0Yyghb/U.CNH6ykPqcHO99v2opgdUbA7QHc5LNl9nsYIW0OAnu2');
 
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `deposits`
---
-ALTER TABLE `deposits`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`);
-
---
--- Indexes for table `personnel`
---
-ALTER TABLE `personnel`
-  ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `redemptions`
---
-ALTER TABLE `redemptions`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`),
-  ADD KEY `personnel_id` (`personnel_id`);
-
---
--- Indexes for table `system_lock`
---
-ALTER TABLE `system_lock`
-  ADD PRIMARY KEY (`id`);
-
---
--- Indexes for table `users`
---
-ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `ip_address` (`ip_address`),
-  ADD UNIQUE KEY `qr_code` (`qr_code`);
-
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `deposits`
---
-ALTER TABLE `deposits`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
-
---
--- AUTO_INCREMENT for table `personnel`
---
-ALTER TABLE `personnel`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
-
---
--- AUTO_INCREMENT for table `redemptions`
---
-ALTER TABLE `redemptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
-
---
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- Constraints for dumped tables
---
-
---
--- Constraints for table `deposits`
---
-ALTER TABLE `deposits`
-  ADD CONSTRAINT `deposits_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `redemptions`
---
-ALTER TABLE `redemptions`
-  ADD CONSTRAINT `redemptions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `redemptions_ibfk_2` FOREIGN KEY (`personnel_id`) REFERENCES `personnel` (`id`) ON DELETE SET NULL;
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+-- This file already includes every migration in db/schema.php up to version 2
+INSERT INTO `schema_migrations` (`version`) VALUES (1), (2);

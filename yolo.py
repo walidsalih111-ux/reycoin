@@ -1,9 +1,10 @@
+import os
 import cv2
 import time
+import uuid
 import threading
 import numpy as np
-from flask import Flask, jsonify
-from flask_cors import CORS # type: ignore
+from flask import Flask, jsonify, request
 from ultralytics import YOLO # type: ignore
 from gpiozero import AngularServo, DigitalInputDevice, DistanceSensor, OutputDevice # ---> Added OutputDevice for MAX7219
 
@@ -11,9 +12,10 @@ from gpiozero import AngularServo, DigitalInputDevice, DistanceSensor, OutputDev
 # 1. INITIALIZE FLASK & YOLO MODEL
 # ==========================================
 app = Flask(__name__)
-CORS(app)
 
-model = YOLO('yolov8n.pt') 
+# Load the model from this script's folder so starting it from another directory doesn't try to download it
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'yolov8n.pt')
+model = YOLO(MODEL_PATH)
 BOTTLE_CLASS_ID = 39 
 
 # ==========================================
@@ -148,7 +150,8 @@ except Exception as e:
 
 # C. Ultrasonic Sensor (Bin Level on GPIO 23 & 24)
 try:
-    sensor = DistanceSensor(echo=24, trigger=23)
+    # gpiozero caps readings at max_distance (default 1 m), but the bin is 1.07 m deep
+    sensor = DistanceSensor(echo=24, trigger=23, max_distance=1.5)
     print("✅ Hardware: Ultrasonic Sensor Initialized.")
 except Exception as e:
     print("⚠️ WARNING: Ultrasonic init failed.", e)
@@ -176,13 +179,15 @@ OPEN_ANGLE = 90.0      # Active/Open position angle
 
 TOTAL_STEPS = int(SWEEP_TIME / STEP_DELAY)  # ~22 steps for a 1.0s transition
 STEP_SIZE = (CLOSED_ANGLE - OPEN_ANGLE) / TOTAL_STEPS      # ~4.09 degrees per step
+HAND_CLEAR_TIMEOUT = 15.0  # Give up if the chute stays blocked this long (dirty sensor or stuck object)
 
 # Thread-safe Frame Sharing, Anti-Cheat Status & Light State variables
 current_frame = None
 current_frame_lock = threading.Lock()
 verification_status_msg = ""  # Updates the HDMI monitor overlay in real time
 light_is_on = False           # Global track of whether the MAX7219 chute light is currently active
-
+servo_lock = threading.Lock()  # Only one thread may drive the gate servos at a time
+queue_lock = threading.Lock()  # Guards detected_queue, shared by Flask and the worker threads
 
 def get_bin_status():
     """Calculates the fill percentage based on ultrasonic distance reading."""
@@ -208,45 +213,57 @@ def initialize_servos_to_closed():
     PWM signal ACTIVE so the servo physically locks and cannot drift or be pushed open.
     """
     if servo1 and servo2:
-        try:
-            print(">> Securing fixed closed position: both servos locked at 180°")
-            servo1.angle = CLOSED_ANGLE
-            servo2.angle = CLOSED_ANGLE
-            time.sleep(0.5)
-            # PWM signal intentionally NOT detached — servo stays locked at 180°
-        except Exception as e:
-            print(f"Servo resting sequence error: {e}")
+        # Waits for a gate sweep in progress instead of fighting it from another thread
+        with servo_lock:
+            try:
+                print(">> Securing fixed closed position: both servos locked at 180°")
+                servo1.angle = CLOSED_ANGLE
+                servo2.angle = CLOSED_ANGLE
+                time.sleep(0.5)
+                # PWM signal intentionally NOT detached — servo stays locked at 180°
+            except Exception as e:
+                print(f"Servo resting sequence error: {e}")
 
-def process_bottle_sequence(size_cat, points):
+def process_bottle_sequence(owner):
     """
     Orchestrates the safety-guarded acceptance loop with strong Anti-Cheat confirmation:
     1. Checks if the IR safety sensor is blocked (hand in the chute).
-    2. Waits for safety clearance (hand completely removed).
+    2. Waits for safety clearance (hand completely removed), up to HAND_CLEAR_TIMEOUT.
     3. Settles the bottle for 0.8 seconds.
     4. Performs spaced Anti-Cheat checks verifying that:
        - The bottle is still present in the camera stream (via thread-safe frame inspections).
        - The user has not re-reached inside the chute to grab it back (no IR disruptions).
-    5. Allocates points and updates queue if and only if anti-cheat clears.
+    5. Sizes the bottle from those checks and queues its points for `owner` (the resident whose
+       session it was detected in) if and only if anti-cheat clears.
     6. Smoothly sweeps servos to open/close gates, depositing the item safely.
+
+    The caller sets gate_busy before starting this thread; it is cleared when the sequence ends.
     """
-    global gate_busy, detected_queue, verification_status_msg, light_is_on
-    fill_pct, is_full = get_bin_status()
-    
-    if is_full:
-        print(f">> Sequence aborted: BIN IS FULL! ({fill_pct}%)")
-        verification_status_msg = "BIN FULL - ABORTED"
-        if led_light:
-            led_light.turn_off_light()
-            light_is_on = False
-        return
-        
+    global gate_busy, detected_queue, verification_status_msg, session_last_activity, light_is_on
+
     try:
-        gate_busy = True  # Lock out frame detection calculations during sequence
-        
+        fill_pct, is_full = get_bin_status()
+        if is_full:
+            print(f">> Sequence aborted: BIN IS FULL! ({fill_pct}%)")
+            verification_status_msg = "BIN FULL - ABORTED"
+            if led_light:
+                led_light.turn_off_light()
+                light_is_on = False
+            return
+
         # --- STEP 1: SAFETY FIRST (IR HAND DETECTION) ---
         if ir_sensor:
             print(">> Checking Chute: Waiting for resident's hand to clear...")
+            wait_started = time.time()
             while ir_sensor.value == 0:
+                if time.time() - wait_started > HAND_CLEAR_TIMEOUT:
+                    verification_status_msg = "FAILED: CHUTE BLOCKED"
+                    print(f">> VERIFICATION FAILED: IR beam blocked for over {HAND_CLEAR_TIMEOUT:.0f}s. Aborting.")
+                    if led_light:
+                        led_light.turn_off_light()
+                        light_is_on = False
+                    time.sleep(1.5)
+                    return
                 verification_status_msg = "HAND IN CHUTE - REMOVE HAND"
                 print("[ OBJECT DETECTED ] ---> Resident's hand is inside the chute! Holding gates closed.")
                 time.sleep(0.1)  # Poll snappy but without overloading CPU
@@ -261,7 +278,8 @@ def process_bottle_sequence(size_cat, points):
         total_checks = 5
         check_interval = 0.3
         ir_violation = False
-        
+        measured_sides = []  # Longest box side (px) of each confirmed sighting, used for sizing
+
         print(">> Anti-Cheat: Starting visual and sensor confirmation...")
         
         for c in range(total_checks):
@@ -302,7 +320,8 @@ def process_bottle_sequence(size_cat, points):
                             
                             if is_bottle_upright(roi):
                                 bottle_found_this_check = True
-                                break 
+                                measured_sides.append(max(w, h))
+                                break
                                 
                 if bottle_found_this_check:
                     verified_detections += 1
@@ -333,45 +352,58 @@ def process_bottle_sequence(size_cat, points):
             time.sleep(1.5)
             return
 
-        # Both parameters match! Confirmed legitimate deposit
+        # Both parameters match! Confirmed legitimate deposit.
+        # Size it from the verification frames (bottle at rest, hand out of the chute) rather than the
+        # first sighting, where a bottle held close to the lens looks bigger and would earn more points.
+        size_cat, points = estimate_size_and_points(float(np.median(measured_sides)))
         verification_status_msg = f"VERIFIED! +{points} PTS"
-        detected_queue.append({"size": size_cat, "points": points})
-        print(f">> Points Confirmed: +{points} pts for {size_cat} PET bottle.")
+        with queue_lock:
+            detected_queue.append({
+                "id": uuid.uuid4().hex,  # Lets api.php credit each bottle exactly once
+                "owner": owner,
+                "size": size_cat,
+                "points": points,
+                "ts": time.time()
+            })
+        if owner == session_owner:
+            session_last_activity = time.time()  # Bottles keep the session open
+        print(f">> Points Confirmed: +{points} pts for {size_cat} PET bottle (resident {owner}).")
         time.sleep(0.5)
 
         # --- STEP 5: SMOOTH SYNCHRONIZED SWEEP (OPEN GATE: 180° -> 90°) ---
         if servo1 and servo2:
-            verification_status_msg = "OPENING GATES..."
-            print(">> Actuating Gates: Rotating servos 180° -> 90° smoothly (OPEN)")
-            
-            # --- MANDATORY HARDWARE REQUIREMENT: TURN OFF LIGHT AS SOON AS THE GATE OPENS ---
-            if led_light:
-                led_light.turn_off_light()
-                light_is_on = False
-                print("[ LIGHTS OFF ] ---> Acceptance gates opening. Disabling chute lights.")
+            with servo_lock:
+                verification_status_msg = "OPENING GATES..."
+                print(">> Actuating Gates: Rotating servos 180° -> 90° smoothly (OPEN)")
 
-            for step in range(TOTAL_STEPS + 1):
-                angle = CLOSED_ANGLE - (step * STEP_SIZE) # Sweep down to 90 degrees
-                servo1.angle = angle
-                servo2.angle = angle
-                time.sleep(STEP_DELAY)
-                
-            verification_status_msg = "DEPOSITING BOTTLE..."
-            print(">> Gates open. Holding for 2.0 seconds for item slide-down...")
-            time.sleep(2.0)               # Keep acceptance gate open for exactly 2 seconds
-            
-            # --- STEP 6: SMOOTH SYNCHRONIZED SWEEP (CLOSE GATE: 90° -> 180°) ---
-            verification_status_msg = "CLOSING GATES..."
-            print(">> Actuating Gates: Rotating servos 90° -> 180° smoothly (CLOSE)")
-            for step in range(TOTAL_STEPS + 1):
-                angle = OPEN_ANGLE + (step * STEP_SIZE)                  # Sweep up to 180 degrees
-                servo1.angle = angle
-                servo2.angle = angle
-                time.sleep(STEP_DELAY)
-                
-            # PWM signal intentionally NOT detached — servos remain locked at 180°
-            # until the next bottle insertion begins.
-            print(">> Gates closed and locked at 180°. Holding fixed until next bottle.")
+                # --- MANDATORY HARDWARE REQUIREMENT: TURN OFF LIGHT AS SOON AS THE GATE OPENS ---
+                if led_light:
+                    led_light.turn_off_light()
+                    light_is_on = False
+                    print("[ LIGHTS OFF ] ---> Acceptance gates opening. Disabling chute lights.")
+
+                for step in range(TOTAL_STEPS + 1):
+                    angle = CLOSED_ANGLE - (step * STEP_SIZE) # Sweep down to 90 degrees
+                    servo1.angle = angle
+                    servo2.angle = angle
+                    time.sleep(STEP_DELAY)
+
+                verification_status_msg = "DEPOSITING BOTTLE..."
+                print(">> Gates open. Holding for 2.0 seconds for item slide-down...")
+                time.sleep(2.0)               # Keep acceptance gate open for exactly 2 seconds
+
+                # --- STEP 6: SMOOTH SYNCHRONIZED SWEEP (CLOSE GATE: 90° -> 180°) ---
+                verification_status_msg = "CLOSING GATES..."
+                print(">> Actuating Gates: Rotating servos 90° -> 180° smoothly (CLOSE)")
+                for step in range(TOTAL_STEPS + 1):
+                    angle = OPEN_ANGLE + (step * STEP_SIZE)                  # Sweep up to 180 degrees
+                    servo1.angle = angle
+                    servo2.angle = angle
+                    time.sleep(STEP_DELAY)
+
+                # PWM signal intentionally NOT detached — servos remain locked at 180°
+                # until the next bottle insertion begins.
+                print(">> Gates closed and locked at 180°. Holding fixed until next bottle.")
         else:
             # Simulation mode wait
             verification_status_msg = "[SIMULATOR] GATES OPENED"
@@ -395,18 +427,19 @@ def process_bottle_sequence(size_cat, points):
 # ==========================================
 is_camera_active = False
 gate_busy = False  # Flag to block frame detection calculations while acceptance gate moves
-detected_queue = []
+detected_queue = []  # Verified bottles waiting for api.php to credit them (removed via /ack)
+session_owner = None  # Resident ID (QR code) of the active scanning session, set by /start
+session_last_activity = 0  # Time of /start or the last verified bottle
 last_detection_time = 0
 COOLDOWN_SECONDS = 5.0  # Cooldown adjusted to match active processing bounds
+SESSION_IDLE_SECONDS = 70  # Ends a session with no verified bottle for this long (= LOCK_SECONDS in api.php)
 
 THRESHOLD_250ML_MAX = 180   
 THRESHOLD_500ML_MAX = 250   
 THRESHOLD_1000ML_MAX = 380  
 
-def estimate_size_and_points(width, height):
-    """Returns size label and corresponding points based on bounding box dimension mapping"""
-    longest_side = max(width, height)
-    
+def estimate_size_and_points(longest_side):
+    """Returns size label and corresponding points based on the bounding box's longest side (px)"""
     if longest_side <= THRESHOLD_250ML_MAX:
         return "250ml", 0.5
     elif longest_side <= THRESHOLD_500ML_MAX:
@@ -449,45 +482,71 @@ def is_bottle_upright(roi):
 # ==========================================
 # 5. FLASK API ENDPOINTS
 # ==========================================
+def end_session():
+    """Stops scanning for new bottles. A bottle already being verified still finishes (see main_gui_loop)."""
+    global is_camera_active, session_owner, light_is_on
+    is_camera_active = False
+    session_owner = None
+
+    # Return both servos back to 180° (closed) resting positions when the session terminates
+    threading.Thread(target=initialize_servos_to_closed, daemon=True).start()
+
+    # Turn off the LED lighting completely on session close
+    if led_light:
+        led_light.turn_off_light()
+        light_is_on = False
+
 @app.route('/start')
 def start_camera():
-    global is_camera_active
+    global is_camera_active, session_owner, session_last_activity, light_is_on
+    owner = request.args.get('owner', '').strip()
+    if not owner:
+        return jsonify({"status": "error", "message": "owner is required"}), 400
+
+    # Bottles detected from now on are credited to this resident
+    session_owner = owner
+    session_last_activity = time.time()
     is_camera_active = True
-    
+
     # Secure and ensure both servos are set at 180° (closed) resting positions on launch
     threading.Thread(target=initialize_servos_to_closed, daemon=True).start()
-    
+
     # Make sure light is initially OFF when session starts
     if led_light:
         led_light.turn_off_light()
-        global light_is_on
         light_is_on = False
-        
+
     return jsonify({"status": "started"})
 
 @app.route('/stop')
 def stop_camera():
-    global is_camera_active
-    is_camera_active = False
-    
-    # Return both servos back to 180° (closed) resting positions when the session terminates
-    threading.Thread(target=initialize_servos_to_closed, daemon=True).start()
-    
-    # Turn off the LED lighting completely on session close
-    if led_light:
-        led_light.turn_off_light()
-        global light_is_on
-        light_is_on = False
-        
+    # Ignore a late stop from a resident whose session was already handed to someone else
+    owner = request.args.get('owner')
+    if owner and owner != session_owner:
+        return jsonify({"status": "ignored"})
+    end_session()
     return jsonify({"status": "stopped"})
 
 @app.route('/poll')
 def poll_detection():
-    global detected_queue
-    if len(detected_queue) > 0:
-        data = detected_queue.pop(0) 
-        return jsonify({"status": "success", "size": data["size"], "points": data["points"]})
-    return jsonify({"status": "empty"})
+    """Lists verified bottles without removing them; api.php calls /ack once they are saved."""
+    with queue_lock:
+        items = list(detected_queue)
+    return jsonify({
+        "status": "success",
+        "items": items,
+        "active": is_camera_active,
+        "owner": session_owner,
+        "busy": gate_busy
+    })
+
+@app.route('/ack')
+def ack_detection():
+    """Removes bottles that api.php has credited (comma-separated ids)."""
+    ids = set(request.args.get('ids', '').split(','))
+    with queue_lock:
+        detected_queue[:] = [item for item in detected_queue if item["id"] not in ids]
+    return jsonify({"status": "success"})
 
 @app.route('/status')
 def system_status():
@@ -498,6 +557,12 @@ def system_status():
 # ==========================================
 # 6. OPENCV NATIVE GUI LOOP (Main Thread)
 # ==========================================
+def stop_idle_session():
+    """Ends a session with no verified bottle for SESSION_IDLE_SECONDS (e.g. the resident's phone died)."""
+    if is_camera_active and not gate_busy and time.time() - session_last_activity > SESSION_IDLE_SECONDS:
+        print(">> Session idle: no bottles for a while. Stopping scanner.")
+        end_session()
+
 def main_gui_loop():
     global is_camera_active, detected_queue, last_detection_time, gate_busy, current_frame, verification_status_msg, light_is_on
     cap = None
@@ -506,11 +571,20 @@ def main_gui_loop():
     print("PET Bottle Scanner ready. Waiting for start command...")
 
     while True:
-        if not is_camera_active:
+        stop_idle_session()
+
+        # Keep the camera running until a bottle that is still being verified finishes,
+        # so the anti-cheat checks always see live frames
+        if not is_camera_active and not gate_busy:
             if cap is not None:
                 cap.release()
                 cap = None
                 cv2.destroyAllWindows()
+            # The lighting check below can re-light the chute just as a session ends; keep it off while idle
+            if light_is_on:
+                if led_light:
+                    led_light.turn_off_light()
+                light_is_on = False
             time.sleep(0.2)
             continue
 
@@ -603,22 +677,25 @@ def main_gui_loop():
                     
                     if not is_bottle_upright(roi): continue
                     
-                    size_cat, points = estimate_size_and_points(w, h)
-                    
+                    # Live preview only; the credited size is measured again during verification
+                    size_cat, points = estimate_size_and_points(max(w, h))
+
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     label = f"PET {size_cat} (+{points}pts)"
                     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
                     current_time = time.time()
-                    if (current_time - last_detection_time) > COOLDOWN_SECONDS:
+                    owner = session_owner  # Captured now: the bottle stays this resident's even if the session ends
+                    if (current_time - last_detection_time) > COOLDOWN_SECONDS and is_camera_active and owner and not gate_busy:
                         # Prevent accumulating points if the machine is full
                         if not is_full:
                             last_detection_time = current_time
-                            
+                            gate_busy = True  # Set before the thread starts so a second sequence can't begin
+
                             # Start the sequence: Safety checks -> Points Allocation -> Gate Sweeps
                             threading.Thread(
-                                target=process_bottle_sequence, 
-                                args=(size_cat, points), 
+                                target=process_bottle_sequence,
+                                args=(owner,),
                                 daemon=True
                             ).start()
                         else:
@@ -646,7 +723,8 @@ def main_gui_loop():
 
 if __name__ == '__main__':
     try:
-        flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False))
+        # Localhost only: api.php and display.php on this Pi are the scanner's only clients
+        flask_thread = threading.Thread(target=lambda: app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False))
         flask_thread.daemon = True
         flask_thread.start()
 

@@ -1,0 +1,6 @@
+# Database dumps hold residents' names and IP addresses; keep them out of git
+*.sql
+!db/recycoin_db.sql
+
+__pycache__/
+*.pyc
